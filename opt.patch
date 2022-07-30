@@ -1,0 +1,27 @@
+diff --git a/Makefile b/Makefile
+index e3cd131..e41bdb6 100644
+--- a/Makefile
++++ b/Makefile
+@@ -30,6 +30,22 @@ ifeq ($(CONFIG_NATIVE),true)
+     SHARED_FLAGS += -march=native
+ endif
+ 
++ifeq ($(CONFIG_X86_64),true)
++    SHARED_FLAGS += -march=x86-64
++endif
++
++ifeq ($(CONFIG_X86_64_V2),true)
++    SHARED_FLAGS += -march=x86-64-v2
++endif
++
++ifeq ($(CONFIG_X86_64_V3),true)
++    SHARED_FLAGS += -march=x86-64-v3
++endif
++
++ifeq ($(CONFIG_X86_64_V4),true)
++    SHARED_FLAGS += -march=x86-64-v4
++endif
++
+ ifeq ($(CONFIG_UBSAN),true)
+     SHARED_FLAGS += -fsanitize=undefined -fno-sanitize-recover=undefined
+ endif

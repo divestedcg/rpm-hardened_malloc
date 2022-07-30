@@ -1,0 +1,12 @@
+.build*
+build
+hardened_malloc
+noarch
+.package*
+pkg
+*.pkg.tar.xz
+*.rpm
+src
+11
+12
+13
