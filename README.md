@@ -8,6 +8,9 @@ This repo contains an RPM specfile and a PKGBUILD for multiarchitecture optimize
 Upstream Project
 ----------------
 - https://github.com/GrapheneOS/hardened_malloc
+	- Donate:
+		- https://grapheneos.org/donate
+		- https://github.com/sponsors/thestinger
 
 Compatibility
 -------------
