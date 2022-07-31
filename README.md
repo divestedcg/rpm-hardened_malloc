@@ -16,8 +16,9 @@ Compatibility
 
 Prebuilts
 ---------
-- via Divested-RPM: https://divested.dev/index.php?page=software#divested-release
-- via CI: https://gitlab.com/divested/rpm-hardened_malloc/-/jobs/artifacts/master/browse?job=build_rpm
+- Fedora via Divested-RPM: https://divested.dev/index.php?page=software#divested-release
+- Fedora via CI: https://gitlab.com/divested/rpm-hardened_malloc/-/jobs/artifacts/master/browse?job=build_rpm
+- Arch via CI: TODO
 
 Known Incompatibilities
 -----------------------
@@ -27,6 +28,7 @@ Known Incompatibilities
 - php-fpm
 	- Workaround: add `InaccessiblePaths=-/etc/ld.so.preload` to a systemd unit override
 	- Our brace includes this workaround
+- qemu with virgl enabled will randomly segfault
 
 License
 -------
