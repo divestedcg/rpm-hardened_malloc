@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=11
-pkgrel=1
+pkgrel=2
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -15,12 +15,14 @@ source=("git+https://github.com/GrapheneOS/$pkgname#tag=$pkgver?signed"
 	"opt.patch"
 	"ld.so.preload"
 	"hardened_malloc.conf"
-	"LICENSE-library")
+	"LICENSE-library"
+	"README.md")
 sha256sums=('SKIP'
 	'c85c8ab49bfb96237567a059376603e1c29ea2626d0696d86382788f2ba79f49'
 	'926f23b9470143bcbba942025c2bdfd551840fd539c1e8fa05fbe67b97959e76'
 	'fb0b0b97b98245a3f39c7dff824e6bb54499459ca787eed44d0e3819ae5bf1c8'
-	'ac78e6c9ca0742f9112ef512dcf3a69fbfd16093f148bbbff7c04e44ae23ffed')
+	'ac78e6c9ca0742f9112ef512dcf3a69fbfd16093f148bbbff7c04e44ae23ffed'
+	'SKIP')
 validpgpkeys=('65EEFE022108E2B708CBFCF7F9E712E59AF5F22A') # Daniel Micay <danielmicay@gmail.com>
 
 build() {
@@ -65,4 +67,5 @@ package() {
 	install -Dm644 ../hardened_malloc.conf "$pkgdir"/etc/sysctl.d/hardened_malloc.conf;
 
 	install -Dm644 ../LICENSE-library "$pkgdir"/usr/share/doc/hardened_malloc/LICENSE-library;
+	install -Dm644 ../README.md "$pkgdir"/usr/share/doc/hardened_malloc/README.md;
 }

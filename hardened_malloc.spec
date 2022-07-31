@@ -2,22 +2,20 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 10%{?dist}
+Release: 11%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/11
 Source1: opt.patch
 Source2: ld.so.preload
 Source3: hardened_malloc.conf
 Source4: LICENSE-library
 Source5: LICENSE-spec
+Source6: README.md
 Summary: Hardened memory allocator from GrapheneOS
 URL: https://github.com/GrapheneOS/hardened_malloc
 Version: 11
 
 %description
-The hardened memory allocator from GrapheneOS; packaged for Fedora Linux.
-Original spec file by HardHatOS.
-Spec file cleaned and updated for Fedora 36 by DCG.
-Additionally added optimized hwcaps variants.
+Hardened allocator designed for modern systems
 
 %prep
 %define _srcdir hardened_malloc
@@ -67,6 +65,7 @@ install -Dm644 "%{SOURCE3}" %{buildroot}%{_sysconfdir}/sysctl.d/hardened_malloc.
 
 install -Dm644 "%{SOURCE4}" %{buildroot}/usr/share/doc/hardened_malloc/LICENSE-library;
 install -Dm644 "%{SOURCE5}" %{buildroot}/usr/share/doc/hardened_malloc/LICENSE-spec;
+install -Dm644 "%{SOURCE6}" %{buildroot}/usr/share/doc/hardened_malloc/README.md;
 
 %files
 %{_sysconfdir}/ld.so.preload
@@ -83,3 +82,4 @@ install -Dm644 "%{SOURCE5}" %{buildroot}/usr/share/doc/hardened_malloc/LICENSE-s
 /lib64/glibc-hwcaps/x86-64-v4/libhardened_malloc-light.so
 /usr/share/doc/hardened_malloc/LICENSE-library
 /usr/share/doc/hardened_malloc/LICENSE-spec
+/usr/share/doc/hardened_malloc/README.md
