@@ -1,5 +1,5 @@
-Package for hardened_malloc
-===========================
+Unofficial package for hardened_malloc
+======================================
 
 Overview
 --------
@@ -34,5 +34,6 @@ MIT
 
 Credits
 -------
+- @GrapheneOS for the hardened_malloc project itself
 - @noatsecure/HardHatOS for the original RPM specfile
 - @thithib for the original PKGBUILD
