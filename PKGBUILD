@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=11
-pkgrel=2
+pkgrel=3
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -52,16 +52,16 @@ build() {
 package() {
 	cd "$pkgname"
 	install -Dm4644 "out/libhardened_malloc.so" "$pkgdir"/usr/lib/libhardened_malloc.so;
-	install -Dm644 "out-default-x86-64/libhardened_malloc-default-x86-64.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64/libhardened_malloc.so;
-	install -Dm644 "out-default-x86-64-v2/libhardened_malloc-default-x86-64-v2.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v2/libhardened_malloc.so;
-	install -Dm644 "out-default-x86-64-v3/libhardened_malloc-default-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc.so;
-	install -Dm644 "out-default-x86-64-v4/libhardened_malloc-default-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc.so;
+	install -Dm4644 "out-default-x86-64/libhardened_malloc-default-x86-64.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64/libhardened_malloc.so;
+	install -Dm4644 "out-default-x86-64-v2/libhardened_malloc-default-x86-64-v2.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v2/libhardened_malloc.so;
+	install -Dm4644 "out-default-x86-64-v3/libhardened_malloc-default-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc.so;
+	install -Dm4644 "out-default-x86-64-v4/libhardened_malloc-default-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc.so;
 
-	install -Dm644 "out-light/libhardened_malloc-light.so" "$pkgdir"/usr/lib/libhardened_malloc-light.so;
-	install -Dm644 "out-light-x86-64/libhardened_malloc-light-x86-64.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64/libhardened_malloc-light.so;
-	install -Dm644 "out-light-x86-64-v2/libhardened_malloc-light-x86-64-v2.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v2/libhardened_malloc-light.so;
-	install -Dm644 "out-light-x86-64-v3/libhardened_malloc-light-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc-light.so;
-	install -Dm644 "out-light-x86-64-v4/libhardened_malloc-light-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc-light.so;
+	install -Dm4644 "out-light/libhardened_malloc-light.so" "$pkgdir"/usr/lib/libhardened_malloc-light.so;
+	install -Dm4644 "out-light-x86-64/libhardened_malloc-light-x86-64.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64/libhardened_malloc-light.so;
+	install -Dm4644 "out-light-x86-64-v2/libhardened_malloc-light-x86-64-v2.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v2/libhardened_malloc-light.so;
+	install -Dm4644 "out-light-x86-64-v3/libhardened_malloc-light-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc-light.so;
+	install -Dm4644 "out-light-x86-64-v4/libhardened_malloc-light-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc-light.so;
 
 	install -Dm644 ../ld.so.preload "$pkgdir"/etc/ld.so.preload;
 	install -Dm644 ../hardened_malloc.conf "$pkgdir"/etc/sysctl.d/hardened_malloc.conf;

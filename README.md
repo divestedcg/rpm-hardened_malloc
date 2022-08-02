@@ -23,8 +23,10 @@ Prebuilts
 - Fedora via CI: https://gitlab.com/divested/rpm-hardened_malloc/-/jobs/artifacts/master/browse?job=build_rpm
 - Arch via CI: TODO
 
-Known Incompatibilities
------------------------
+Known Issues
+------------
+- Systems with limited RAM (<1GB) may OOM more often due to increased requirements
+	- Workaround: edit `/etc/ld.so.preload` to use -light variant
 - Firefox/Tor Browser/etc.
 	- Workaround: add `blacklist /etc/ld.so.preload` to their firejail profiles
 	- Our patched firejail available via Divested-RPM includes this workaround
