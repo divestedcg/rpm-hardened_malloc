@@ -3,7 +3,7 @@ Unofficial package for hardened_malloc
 
 Overview
 --------
-This repo contains an RPM specfile and a PKGBUILD for multiarchitecture optimized builds of the hardened_malloc library.
+This repo contains an RPM specfile and a PKGBUILD for micro-architecture optimized builds of the hardened_malloc library.
 
 Upstream Project
 ----------------
@@ -22,6 +22,21 @@ Prebuilts
 - Fedora via Divested-RPM: https://divested.dev/index.php?page=software#divested-release
 - Fedora via CI: https://gitlab.com/divested/rpm-hardened_malloc/-/jobs/artifacts/master/browse?job=build_rpm
 - Arch via CI: TODO
+
+Included Variants
+-----------------
+Three variants are included compiled for four different micro-architetures:
+
+- default
+	- prioritizes security
+- memefficient
+	- prioritizes memory usage
+		- disables slab quarantines and raises the guard slab interval from 1 to 8
+- light
+	- prioritizes CPU and memory usage
+		- disables the slab quarantines, write after free check, slot randomization, and raises the guard slab interval from 1 to 8
+
+The current default is memefficient.
 
 Known Issues
 ------------
