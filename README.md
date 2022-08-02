@@ -25,7 +25,7 @@ Prebuilts
 
 Included Variants
 -----------------
-Three variants are included compiled for four different micro-architetures:
+Three variants are included compiled for four different micro-architectures:
 
 - default
 	- prioritizes security
