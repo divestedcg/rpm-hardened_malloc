@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=11
-pkgrel=5
+pkgrel=6
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -39,10 +39,10 @@ build() {
 	ln -s light.mk config/light-x86-64-v3.mk;
 	ln -s light.mk config/light-x86-64-v4.mk;
 
-	#add a memory efficient variant, based on light with perf impactful features re-enabled
-	cp config/light.mk config/memefficient.mk;
-	sed -i 's/CONFIG_WRITE_AFTER_FREE_CHECK := false/CONFIG_WRITE_AFTER_FREE_CHECK := true/' config/memefficient.mk;
-	sed -i 's/CONFIG_SLOT_RANDOMIZE := false/CONFIG_SLOT_RANDOMIZE := true/' config/memefficient.mk;
+	#add a memory efficient variant
+	cp config/default.mk config/memefficient.mk;
+	sed -i 's/CONFIG_N_ARENA := 4/CONFIG_N_ARENA := 1/' config/memefficient.mk;
+	sed -i 's/CONFIG_EXTENDED_SIZE_CLASSES := true/CONFIG_EXTENDED_SIZE_CLASSES := false/' config/memefficient.mk;
 	ln -s memefficient.mk config/memefficient-x86-64.mk;
 	ln -s memefficient.mk config/memefficient-x86-64-v2.mk;
 	ln -s memefficient.mk config/memefficient-x86-64-v3.mk;

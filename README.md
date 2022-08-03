@@ -28,12 +28,12 @@ Included Variants
 Three variants are included compiled for four different micro-architectures:
 
 - default
-	- prioritizes security
+	- prioritizes security, passes all tests
 - memefficient
-	- prioritizes memory usage
-		- disables slab quarantines and raises the guard slab interval from 1 to 8
+	- prioritizes memory usage, passes all tests
+		- decreases arenas used from 4 to 1 and disables extended size classes
 - light
-	- prioritizes CPU and memory usage
+	- prioritizes CPU and memory usage, fails six tests
 		- disables the slab quarantines, write after free check, slot randomization, and raises the guard slab interval from 1 to 8
 
 The current default is memefficient.
