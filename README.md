@@ -46,7 +46,9 @@ Known Issues
 - php-fpm
 	- Workaround: add `InaccessiblePaths=-/etc/ld.so.preload` to a systemd unit override
 	- Our brace includes this workaround
+- certbot segfaults consistently
 - qemu with virgl enabled will randomly segfault
+- nautilus will randomly segfault when navigating directory trees too quickly
 
 License
 -------
