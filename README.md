@@ -14,7 +14,7 @@ Upstream Project
 
 Compatibility
 -------------
-- Fedora 36
+- Fedora 35/36/37/etc.
 - Arch Linux
 
 Prebuilts
@@ -43,11 +43,13 @@ Known Issues
 - Firefox/Tor Browser/etc.
 	- Workaround: add `blacklist /etc/ld.so.preload` to their firejail profiles
 	- Our patched firejail available via Divested-RPM includes this workaround
-- php-fpm
-	- Workaround: add `InaccessiblePaths=-/etc/ld.so.preload` to a systemd unit override
-	- Our brace includes this workaround
 - certbot segfaults consistently
-- qemu with virgl enabled will randomly segfault
+	- Workaround included for certbot-renew systemd service
+- php-fpm
+	- Workaround included for php-fpm systemd service
+- virtiofs will stall out if used on host
+	- Wokaround included for virtqemud systemd servie
+- qemu with virgl enabled will sometimes randomly segfault
 - nautilus will randomly segfault when navigating directory trees too quickly
 
 License
