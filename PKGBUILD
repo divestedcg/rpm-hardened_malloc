@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=11
-pkgrel=21
+pkgrel=22
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -97,5 +97,6 @@ package() {
 
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/certbot-renew.service.d/00-hardened_malloc_disable.conf;
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/php-fpm.service.d/00-hardened_malloc_disable.conf;
+	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/libvirtd.service.d/00-hardened_malloc_disable.conf;
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/virtqemud.service.d/00-hardened_malloc_disable.conf;
 }

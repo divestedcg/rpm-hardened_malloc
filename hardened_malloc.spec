@@ -2,7 +2,7 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 21%{?dist}
+Release: 22%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/11
 Source1: opt.patch
 Source2: ld.so.preload
@@ -94,6 +94,7 @@ install -Dm644 "%{SOURCE6}" %{buildroot}/usr/share/doc/hardened_malloc/README.md
 
 install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/certbot-renew.service.d/00-hardened_malloc_disable.conf;
 install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/php-fpm.service.d/00-hardened_malloc_disable.conf;
+install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/libvirtd.service.d/00-hardened_malloc_disable.conf;
 install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/virtqemud.service.d/00-hardened_malloc_disable.conf;
 
 %files
@@ -119,4 +120,5 @@ install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/virtqemud.servic
 /usr/share/doc/hardened_malloc/README.md
 /usr/lib/systemd/system/certbot-renew.service.d/00-hardened_malloc_disable.conf
 /usr/lib/systemd/system/php-fpm.service.d/00-hardened_malloc_disable.conf
+/usr/lib/systemd/system/libvirtd.service.d/00-hardened_malloc_disable.conf
 /usr/lib/systemd/system/virtqemud.service.d/00-hardened_malloc_disable.conf
