@@ -48,7 +48,7 @@ Known Issues
 - php-fpm
 	- Workaround included for php-fpm systemd service
 - virtiofs will stall out if used on host
-	- Wokaround included for virtqemud systemd servie
+	- Wokaround included for virtqemud systemd service
 - qemu with virgl enabled will sometimes randomly segfault
 - nautilus will randomly segfault when navigating directory trees too quickly
 
