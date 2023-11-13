@@ -2,7 +2,7 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 1%{?dist}
+Release: 2%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/12
 Source1: opt.patch
 Source2: ld.so.preload
@@ -48,6 +48,14 @@ ln -s memefficient.mk config/memefficient-x86-64-v2.mk;
 ln -s memefficient.mk config/memefficient-x86-64-v3.mk;
 ln -s memefficient.mk config/memefficient-x86-64-v4.mk;
 
+#add a Memory Protection Keys variant
+cp config/default.mk config/pku.mk;
+sed -i 's/CONFIG_SEAL_METADATA := false/CONFIG_SEAL_METADATA := true/' config/pku.mk;
+ln -s pku.mk config/pku-x86-64.mk;
+ln -s pku.mk config/pku-x86-64-v2.mk;
+ln -s pku.mk config/pku-x86-64-v3.mk;
+ln -s pku.mk config/pku-x86-64-v4.mk;
+
 %{__make} CONFIG_NATIVE=false CONFIG_WERROR=false VARIANT=default;
 %{__make} CONFIG_NATIVE=false CONFIG_X86_64=true CONFIG_WERROR=false VARIANT=default-x86-64;
 %{__make} CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=default-x86-64-v2;
@@ -65,6 +73,12 @@ ln -s memefficient.mk config/memefficient-x86-64-v4.mk;
 %{__make} CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=memefficient-x86-64-v2;
 %{__make} CONFIG_NATIVE=false CONFIG_X86_64_V3=true CONFIG_WERROR=false VARIANT=memefficient-x86-64-v3;
 %{__make} CONFIG_NATIVE=false CONFIG_X86_64_V4=true CONFIG_WERROR=false VARIANT=memefficient-x86-64-v4;
+
+%{__make} CONFIG_NATIVE=false CONFIG_WERROR=false VARIANT=pku;
+%{__make} CONFIG_NATIVE=false CONFIG_X86_64=true CONFIG_WERROR=false VARIANT=pku-x86-64;
+%{__make} CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=pku-x86-64-v2;
+%{__make} CONFIG_NATIVE=false CONFIG_X86_64_V3=true CONFIG_WERROR=false VARIANT=pku-x86-64-v3;
+%{__make} CONFIG_NATIVE=false CONFIG_X86_64_V4=true CONFIG_WERROR=false VARIANT=pku-x86-64-v4;
 
 %install
 install -Dm4644 "%{_srcdir}/out/libhardened_malloc.so" %{buildroot}/lib64/libhardened_malloc.so;
@@ -85,6 +99,12 @@ install -Dm4644 "%{_srcdir}/out-memefficient-x86-64-v2/libhardened_malloc-memeff
 install -Dm4644 "%{_srcdir}/out-memefficient-x86-64-v3/libhardened_malloc-memefficient-x86-64-v3.so" %{buildroot}/lib64/glibc-hwcaps/x86-64-v3/libhardened_malloc-memefficient.so;
 install -Dm4644 "%{_srcdir}/out-memefficient-x86-64-v4/libhardened_malloc-memefficient-x86-64-v4.so" %{buildroot}/lib64/glibc-hwcaps/x86-64-v4/libhardened_malloc-memefficient.so;
 
+install -Dm4644 "%{_srcdir}/out-pku/libhardened_malloc-pku.so" %{buildroot}/lib64/libhardened_malloc-pku.so;
+install -Dm4644 "%{_srcdir}/out-pku-x86-64/libhardened_malloc-pku-x86-64.so" %{buildroot}/lib64/glibc-hwcaps/x86-64/libhardened_malloc-pku.so;
+install -Dm4644 "%{_srcdir}/out-pku-x86-64-v2/libhardened_malloc-pku-x86-64-v2.so" %{buildroot}/lib64/glibc-hwcaps/x86-64-v2/libhardened_malloc-pku.so;
+install -Dm4644 "%{_srcdir}/out-pku-x86-64-v3/libhardened_malloc-pku-x86-64-v3.so" %{buildroot}/lib64/glibc-hwcaps/x86-64-v3/libhardened_malloc-pku.so;
+install -Dm4644 "%{_srcdir}/out-pku-x86-64-v4/libhardened_malloc-pku-x86-64-v4.so" %{buildroot}/lib64/glibc-hwcaps/x86-64-v4/libhardened_malloc-pku.so;
+
 install -Dm644 "%{SOURCE2}" %{buildroot}%{_sysconfdir}/ld.so.preload;
 install -Dm644 "%{SOURCE3}" %{buildroot}%{_sysconfdir}/sysctl.d/hardened_malloc.conf;
 
@@ -103,6 +123,7 @@ install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/virtqemud.servic
 /lib64/libhardened_malloc.so
 /lib64/libhardened_malloc-light.so
 /lib64/libhardened_malloc-memefficient.so
+/lib64/libhardened_malloc-pku.so
 /lib64/glibc-hwcaps/x86-64/libhardened_malloc.so
 /lib64/glibc-hwcaps/x86-64-v2/libhardened_malloc.so
 /lib64/glibc-hwcaps/x86-64-v3/libhardened_malloc.so
@@ -115,6 +136,10 @@ install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/virtqemud.servic
 /lib64/glibc-hwcaps/x86-64-v2/libhardened_malloc-memefficient.so
 /lib64/glibc-hwcaps/x86-64-v3/libhardened_malloc-memefficient.so
 /lib64/glibc-hwcaps/x86-64-v4/libhardened_malloc-memefficient.so
+/lib64/glibc-hwcaps/x86-64/libhardened_malloc-pku.so
+/lib64/glibc-hwcaps/x86-64-v2/libhardened_malloc-pku.so
+/lib64/glibc-hwcaps/x86-64-v3/libhardened_malloc-pku.so
+/lib64/glibc-hwcaps/x86-64-v4/libhardened_malloc-pku.so
 /usr/share/doc/hardened_malloc/LICENSE-library
 /usr/share/doc/hardened_malloc/LICENSE-spec
 /usr/share/doc/hardened_malloc/README.md
