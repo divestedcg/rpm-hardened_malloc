@@ -30,6 +30,7 @@ Four variants are included compiled for four different micro-architectures:
 - pku
 	- prioritizes security, passes all tests
 		- enables metadata sealing via MPK, requires CPU support: `grep pku /proc/cpuinfo`
+		- system calls for this likely won't be allowed, eg. systemd units will need `SystemCallFilter=@pkey`
 - default
 	- prioritizes security, passes all tests
 - memefficient
