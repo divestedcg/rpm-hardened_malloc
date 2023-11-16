@@ -14,7 +14,7 @@ Upstream Project
 
 Compatibility
 -------------
-- Fedora 35/36/37/etc.
+- Fedora 38/39/etc.
 - Arch Linux
 
 Prebuilts
@@ -55,6 +55,7 @@ Known Issues
 	- Wokaround included for virtqemud systemd service
 - qemu with virgl enabled will sometimes randomly segfault
 - nautilus will randomly segfault when navigating directory trees too quickly
+- There is an included `nohm` alias to start programs without it
 
 License
 -------
@@ -65,3 +66,4 @@ Credits
 - @GrapheneOS for the hardened_malloc project itself
 - @noatsecure/HardHatOS for the original RPM specfile
 - @thithib for the original PKGBUILD
+- Whonix for the bubblewrap command to disable the preload

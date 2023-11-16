@@ -2,7 +2,7 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 3%{?dist}
+Release: 4%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/12
 Source1: opt.patch
 Source2: ld.so.preload
@@ -12,6 +12,7 @@ Source5: LICENSE-spec
 Source6: README.md
 Source7: hardened_malloc_disable.conf
 Source8: hardened_malloc_allow_pkey.conf
+Source9: hardened_malloc_disable.sh
 Summary: Hardened memory allocator from GrapheneOS
 URL: https://github.com/GrapheneOS/hardened_malloc
 Version: 12
@@ -118,16 +119,18 @@ install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/php-fpm.service.
 install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/libvirtd.service.d/00-hardened_malloc_disable.conf;
 install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/virtqemud.service.d/00-hardened_malloc_disable.conf;
 
-#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/NetworkManager.service.d/99-hardened_malloc_allow_pkey.conf;
-#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/irqbalance.service.d/99-hardened_malloc_allow_pkey.conf;
-#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/rngd.service.d/99-hardened_malloc_allow_pkey.conf;
-#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/wpa_supplicant.service.d/99-hardened_malloc_allow_pkey.conf;
 #install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/fprintd.service.d/99-hardened_malloc_allow_pkey.conf;
+#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/irqbalance.service.d/99-hardened_malloc_allow_pkey.conf;
+#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/NetworkManager.service.d/99-hardened_malloc_allow_pkey.conf;
 #install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/polkit.service.d/99-hardened_malloc_allow_pkey.conf;
+#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/rngd.service.d/99-hardened_malloc_allow_pkey.conf;
 #install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/upower.service.d/99-hardened_malloc_allow_pkey.conf;
-#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/user/pipewire.service.d/99-hardened_malloc_allow_pkey.conf;
+#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/wpa_supplicant.service.d/99-hardened_malloc_allow_pkey.conf;
 #install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/user/pipewire-pulse.service.d/99-hardened_malloc_allow_pkey.conf;
+#install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/user/pipewire.service.d/99-hardened_malloc_allow_pkey.conf;
 #install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/user/wireplumber.service.d/99-hardened_malloc_allow_pkey.conf;
+
+install -Dm644 "%{SOURCE9}" %{buildroot}/etc/profile.d/hardened_malloc_disable.sh;
 
 %files
 %{_sysconfdir}/ld.so.preload
@@ -156,3 +159,4 @@ install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/virtqemud.servic
 /usr/share/doc/hardened_malloc/LICENSE-spec
 /usr/share/doc/hardened_malloc/README.md
 /usr/lib/systemd/*/*/*.conf
+/etc/profile.d/hardened_malloc_disable.sh
