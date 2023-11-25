@@ -135,5 +135,5 @@ package() {
 	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/user/pipewire.service.d/99-hardened_malloc_allow_pkey.conf;
 	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/user/wireplumber.service.d/99-hardened_malloc_allow_pkey.conf;
 
-	install -Dm644 ../hardened_malloc_disable.sh "$pkgdir"/etc/profile.d/hardened_malloc_disable.sh;
+	install -Dm644 ../hardened_malloc_helpers.sh "$pkgdir"/etc/profile.d/hardened_malloc_helpers.sh;
 }

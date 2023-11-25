@@ -130,7 +130,7 @@ install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/virtqemud.servic
 #install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/user/pipewire.service.d/99-hardened_malloc_allow_pkey.conf;
 #install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/user/wireplumber.service.d/99-hardened_malloc_allow_pkey.conf;
 
-install -Dm644 "%{SOURCE9}" %{buildroot}/etc/profile.d/hardened_malloc_disable.sh;
+install -Dm644 "%{SOURCE9}" %{buildroot}/etc/profile.d/hardened_malloc_helpers.sh;
 
 %files
 %{_sysconfdir}/ld.so.preload
@@ -159,4 +159,4 @@ install -Dm644 "%{SOURCE9}" %{buildroot}/etc/profile.d/hardened_malloc_disable.s
 /usr/share/doc/hardened_malloc/LICENSE-spec
 /usr/share/doc/hardened_malloc/README.md
 /usr/lib/systemd/*/*/*.conf
-/etc/profile.d/hardened_malloc_disable.sh
+/etc/profile.d/hardened_malloc_helpers.sh
