@@ -55,6 +55,9 @@ Known Issues
 	- Wokaround included for virtqemud systemd service
 - qemu with virgl enabled will sometimes randomly segfault
 - nautilus will randomly segfault when navigating directory trees too quickly
+- wireplumber 0.4.16 has a write after free issue
+	- Workaround included for wireplumber systemd user service
+	- https://gitlab.freedesktop.org/pipewire/wireplumber/-/issues/534
 - There is an included `nohm` alias to start programs without it
 - You can also fetch journald output with `gethmlogs`
 
