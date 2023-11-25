@@ -56,6 +56,7 @@ Known Issues
 - qemu with virgl enabled will sometimes randomly segfault
 - nautilus will randomly segfault when navigating directory trees too quickly
 - There is an included `nohm` alias to start programs without it
+- You can also fetch journald output with `gethmlogs`
 
 License
 -------
