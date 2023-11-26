@@ -49,12 +49,14 @@ Known Issues
 	- Our patched firejail available via Divested-RPM includes this workaround
 - certbot segfaults consistently
 	- Workaround included for certbot-renew systemd service
+	- 2023/11/26: can't reproduce anymore, maybe fixed
 - php-fpm
 	- Workaround included for php-fpm systemd service
 - virtiofs will stall out if used on host
 	- Wokaround included for virtqemud systemd service
 - qemu with virgl enabled will sometimes randomly segfault
 - nautilus will randomly segfault when navigating directory trees too quickly
+	- This seems to happen even without hm
 - wireplumber 0.4.16 has a write after free issue
 	- Workaround included for wireplumber systemd user service
 	- https://gitlab.freedesktop.org/pipewire/wireplumber/-/issues/534

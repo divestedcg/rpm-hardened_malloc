@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=12
-pkgrel=6
+pkgrel=7
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -19,7 +19,8 @@ source=("git+https://github.com/GrapheneOS/$pkgname#tag=$pkgver?signed"
 	"README.md"
 	"hardened_malloc_disable.conf"
 	"hardened_malloc_allow_pkey.conf"
-	"hardened_malloc_helpers.sh")
+	"hardened_malloc_helpers.sh"
+	"hardened_malloc_light.conf")
 sha256sums=('SKIP'
 	'c85c8ab49bfb96237567a059376603e1c29ea2626d0696d86382788f2ba79f49'
 	'fdbff0f87013bcfe02a3958ba1dfe62fb875127fa39f83c571b57ae0427c7b38'
@@ -28,7 +29,8 @@ sha256sums=('SKIP'
 	'SKIP'
 	'bb0abba87750662569e26d36076edaad2911c632de05b052d29f9ee5b4177081'
 	'c7881757fc4fae1860026b360a820cc6436f6dc3c30a248e29ba6e7caf099cbc'
-	'6828b4b329d7567903edd30e6777cff596070c49fb15b34b0ac093afef011311')
+	'6828b4b329d7567903edd30e6777cff596070c49fb15b34b0ac093afef011311'
+	'ef944bfe6de9d0c56d59cc2b01a6afd89282a76c3d7479b2e66cb7ce282309db')
 validpgpkeys=('65EEFE022108E2B708CBFCF7F9E712E59AF5F22A') # Daniel Micay <danielmicay@gmail.com>
 
 build() {
@@ -124,6 +126,7 @@ package() {
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/libvirtd.service.d/00-hardened_malloc_disable.conf;
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/virtqemud.service.d/00-hardened_malloc_disable.conf;
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/user/wireplumber.service.d/00-hardened_malloc_disable.conf;
+	install -Dm644 ../hardened_malloc_light.conf "$pkgdir"/usr/lib/systemd/user/wireplumber.service.d/00-hardened_malloc_light.conf;
 
 	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/fprintd.service.d/99-hardened_malloc_allow_pkey.conf;
 	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/irqbalance.service.d/99-hardened_malloc_allow_pkey.conf;
