@@ -2,7 +2,7 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 8%{?dist}
+Release: 9%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/12
 Source1: opt.patch
 Source2: ld.so.preload
@@ -120,10 +120,6 @@ install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/php-fpm.service.
 install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/libvirtd.service.d/00-hardened_malloc_disable.conf;
 install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/virtqemud.service.d/00-hardened_malloc_disable.conf;
 
-
-install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/user/wireplumber.service.d/00-hardened_malloc_disable.conf;
-install -Dm644 "%{SOURCE10}" %{buildroot}/usr/lib/systemd/user/wireplumber.service.d/00-hardened_malloc_light.conf;
-install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/user/gnome-terminal-server.service.d/00-hardened_malloc_disable.conf;
 install -Dm644 "%{SOURCE10}" %{buildroot}/usr/lib/systemd/user/gnome-terminal-server.service.d/00-hardened_malloc_light.conf;
 
 #install -Dm644 "%{SOURCE8}" %{buildroot}/usr/lib/systemd/system/fprintd.service.d/99-hardened_malloc_allow_pkey.conf;

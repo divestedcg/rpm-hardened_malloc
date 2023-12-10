@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=12
-pkgrel=8
+pkgrel=9
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -126,9 +126,6 @@ package() {
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/libvirtd.service.d/00-hardened_malloc_disable.conf;
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/virtqemud.service.d/00-hardened_malloc_disable.conf;
 
-	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/user/wireplumber.service.d/00-hardened_malloc_disable.conf;
-	install -Dm644 ../hardened_malloc_light.conf "$pkgdir"/usr/lib/systemd/user/wireplumber.service.d/00-hardened_malloc_light.conf;
-	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/user/gnome-terminal-server.service.d/00-hardened_malloc_disable.conf;
 	install -Dm644 ../hardened_malloc_light.conf "$pkgdir"/usr/lib/systemd/user/gnome-terminal-server.service.d/00-hardened_malloc_light.conf;
 
 	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/fprintd.service.d/99-hardened_malloc_allow_pkey.conf;

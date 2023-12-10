@@ -59,7 +59,6 @@ Known Issues
 	- This seems to happen even without hm
 - wireplumber 0.4.16 has a write after free issue
 	- Fixed in 0.4.17
-	- Workaround included for wireplumber systemd user service
 	- https://gitlab.freedesktop.org/pipewire/wireplumber/-/issues/534
 - gnome-control-center <=45.1 has a write after free issue
 	- Avoid the privacy settings tab
