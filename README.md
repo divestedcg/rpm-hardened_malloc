@@ -64,7 +64,8 @@ Known Issues
 	- Avoid the privacy settings tab
 	- https://gitlab.gnome.org/GNOME/gnome-control-center/-/merge_requests/2012
 	- https://bugzilla.redhat.com/show_bug.cgi?id=2230571
-- gnome-terminal-server 3.50.1 has a write after free issue
+- libhandy <=1.8.2 has a write after free issue
+	- Workaround included for gnome-terminal-server systemd user service
 	- https://bugzilla.redhat.com/show_bug.cgi?id=2253814
 - There is an included `nohm` alias to start programs without it
 - You can also fetch journald output with `gethmlogs`
