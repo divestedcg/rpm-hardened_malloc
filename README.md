@@ -53,7 +53,7 @@ Known Issues
 - php-fpm
 	- Workaround included for php-fpm systemd service
 - virtiofs will stall out if used on host
-	- Wokaround included for virtqemud systemd service
+	- Workaround included for virtqemud systemd service
 - qemu with virgl enabled will sometimes randomly segfault
 - nautilus will randomly segfault when navigating directory trees too quickly
 	- This seems to happen even without hm
@@ -61,10 +61,12 @@ Known Issues
 	- Fixed in 0.4.17
 	- https://gitlab.freedesktop.org/pipewire/wireplumber/-/issues/534
 - gnome-control-center <=45.1 has a write after free issue
+	- Fixed in 45.2
 	- Avoid the privacy settings tab
 	- https://gitlab.gnome.org/GNOME/gnome-control-center/-/merge_requests/2012
 	- https://bugzilla.redhat.com/show_bug.cgi?id=2230571
 - libhandy <=1.8.2 has a write after free issue
+	- Fedora fixed in libhandy-1.8.2-5.fc39
 	- Workaround included for gnome-terminal-server systemd user service
 	- https://bugzilla.redhat.com/show_bug.cgi?id=2253814
 - There is an included `nohm` alias to start programs without it
