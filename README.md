@@ -25,12 +25,8 @@ Prebuilts
 
 Included Variants
 -----------------
-Four variants are included compiled for four different micro-architectures:
+Three variants are included compiled for four different micro-architectures:
 
-- pku
-	- prioritizes security, passes all tests
-		- enables metadata sealing via MPK, requires CPU support: `grep pku /proc/cpuinfo`
-		- system calls for this likely won't be allowed, eg. systemd units will need `SystemCallFilter=@pkey`
 - default
 	- prioritizes security, passes all tests
 - memefficient
@@ -67,7 +63,6 @@ Known Issues
 	- https://bugzilla.redhat.com/show_bug.cgi?id=2230571
 - libhandy <=1.8.2 has a write after free issue
 	- Fedora fixed in libhandy-1.8.2-5.fc39
-	- Workaround included for gnome-terminal-server systemd user service
 	- https://bugzilla.redhat.com/show_bug.cgi?id=2253814
 - There is an included `nohm` alias to start programs without it
 - You can also fetch journald output with `gethmlogs`

@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=12
-pkgrel=9
+pkgrel=10
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -18,9 +18,7 @@ source=("git+https://github.com/GrapheneOS/$pkgname#tag=$pkgver?signed"
 	"LICENSE-library"
 	"README.md"
 	"hardened_malloc_disable.conf"
-	"hardened_malloc_allow_pkey.conf"
-	"hardened_malloc_helpers.sh"
-	"hardened_malloc_light.conf")
+	"hardened_malloc_helpers.sh")
 sha256sums=('SKIP'
 	'c85c8ab49bfb96237567a059376603e1c29ea2626d0696d86382788f2ba79f49'
 	'fdbff0f87013bcfe02a3958ba1dfe62fb875127fa39f83c571b57ae0427c7b38'
@@ -56,14 +54,6 @@ build() {
 	ln -s memefficient.mk config/memefficient-x86-64-v3.mk;
 	ln -s memefficient.mk config/memefficient-x86-64-v4.mk;
 
-	#add a Memory Protection Keys variant
-	cp config/default.mk config/pku.mk;
-	sed -i 's/CONFIG_SEAL_METADATA := false/CONFIG_SEAL_METADATA := true/' config/pku.mk;
-	ln -s pku.mk config/pku-x86-64.mk;
-	ln -s pku.mk config/pku-x86-64-v2.mk;
-	ln -s pku.mk config/pku-x86-64-v3.mk;
-	ln -s pku.mk config/pku-x86-64-v4.mk;
-
 	make CONFIG_NATIVE=false CONFIG_WERROR=false VARIANT=default;
 	make CONFIG_NATIVE=false CONFIG_X86_64=true CONFIG_WERROR=false VARIANT=default-x86-64;
 	make CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=default-x86-64-v2;
@@ -81,12 +71,6 @@ build() {
 	make CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=memefficient-x86-64-v2;
 	make CONFIG_NATIVE=false CONFIG_X86_64_V3=true CONFIG_WERROR=false VARIANT=memefficient-x86-64-v3;
 	make CONFIG_NATIVE=false CONFIG_X86_64_V4=true CONFIG_WERROR=false VARIANT=memefficient-x86-64-v4;
-
-	make CONFIG_NATIVE=false CONFIG_WERROR=false VARIANT=pku;
-	make CONFIG_NATIVE=false CONFIG_X86_64=true CONFIG_WERROR=false VARIANT=pku-x86-64;
-	make CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=pku-x86-64-v2;
-	make CONFIG_NATIVE=false CONFIG_X86_64_V3=true CONFIG_WERROR=false VARIANT=pku-x86-64-v3;
-	make CONFIG_NATIVE=false CONFIG_X86_64_V4=true CONFIG_WERROR=false VARIANT=pku-x86-64-v4;
 }
 
 package() {
@@ -109,12 +93,6 @@ package() {
 	install -Dm4644 "out-memefficient-x86-64-v3/libhardened_malloc-memefficient-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc-memefficient.so;
 	install -Dm4644 "out-memefficient-x86-64-v4/libhardened_malloc-memefficient-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc-memefficient.so;
 
-	install -Dm4644 "out-pku/libhardened_malloc-pku.so" "$pkgdir"/usr/lib/libhardened_malloc-pku.so;
-	install -Dm4644 "out-pku-x86-64/libhardened_malloc-pku-x86-64.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64/libhardened_malloc-pku.so;
-	install -Dm4644 "out-pku-x86-64-v2/libhardened_malloc-pku-x86-64-v2.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v2/libhardened_malloc-pku.so;
-	install -Dm4644 "out-pku-x86-64-v3/libhardened_malloc-pku-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc-pku.so;
-	install -Dm4644 "out-pku-x86-64-v4/libhardened_malloc-pku-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc-pku.so;
-
 	install -Dm644 ../ld.so.preload "$pkgdir"/etc/ld.so.preload;
 	install -Dm644 ../hardened_malloc.conf "$pkgdir"/etc/sysctl.d/hardened_malloc.conf;
 
@@ -125,19 +103,6 @@ package() {
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/php-fpm.service.d/00-hardened_malloc_disable.conf;
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/libvirtd.service.d/00-hardened_malloc_disable.conf;
 	install -Dm644 ../hardened_malloc_disable.conf "$pkgdir"/usr/lib/systemd/system/virtqemud.service.d/00-hardened_malloc_disable.conf;
-
-	install -Dm644 ../hardened_malloc_light.conf "$pkgdir"/usr/lib/systemd/user/gnome-terminal-server.service.d/00-hardened_malloc_light.conf;
-
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/fprintd.service.d/99-hardened_malloc_allow_pkey.conf;
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/irqbalance.service.d/99-hardened_malloc_allow_pkey.conf;
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/NetworkManager.service.d/99-hardened_malloc_allow_pkey.conf;
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/polkit.service.d/99-hardened_malloc_allow_pkey.conf;
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/rngd.service.d/99-hardened_malloc_allow_pkey.conf;
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/upower.service.d/99-hardened_malloc_allow_pkey.conf;
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/system/wpa_supplicant.service.d/99-hardened_malloc_allow_pkey.conf;
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/user/pipewire-pulse.service.d/99-hardened_malloc_allow_pkey.conf;
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/user/pipewire.service.d/99-hardened_malloc_allow_pkey.conf;
-	#install -Dm644 ../hardened_malloc_allow_pkey.conf "$pkgdir"/usr/lib/systemd/user/wireplumber.service.d/99-hardened_malloc_allow_pkey.conf;
 
 	install -Dm644 ../hardened_malloc_helpers.sh "$pkgdir"/etc/profile.d/hardened_malloc_helpers.sh;
 }
