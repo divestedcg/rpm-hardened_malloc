@@ -64,6 +64,8 @@ Known Issues
 - libhandy <=1.8.2 has a write after free issue
 	- Fedora fixed in libhandy-1.8.2-5.fc39
 	- https://bugzilla.redhat.com/show_bug.cgi?id=2253814
+- dnf may crash on large transactions, especially (offline) system-upgrade
+	- please disable/remove it temporarily before invoking the update
 - There is an included `nohm` alias to start programs without it
 - You can also fetch journald output with `gethmlogs`
 
