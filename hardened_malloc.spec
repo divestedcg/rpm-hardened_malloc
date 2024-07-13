@@ -28,7 +28,7 @@ echo "Enabling hardened_malloc globally with -memefficient due to <12GB total sy
 echo "libhardened_malloc-memefficient.so" > /etc/ld.so.preload;
 fi;
 
-%postun
+%preun
 if [ "$1" == "0" ]; then
 echo "Removing ld.so.preload";
 rm /etc/ld.so.preload;
