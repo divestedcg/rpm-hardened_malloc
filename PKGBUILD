@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=12
-pkgrel=11
+pkgrel=12
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -22,13 +22,13 @@ source=("git+https://github.com/GrapheneOS/$pkgname#tag=$pkgver?signed"
 sha256sums=('SKIP'
 	'c85c8ab49bfb96237567a059376603e1c29ea2626d0696d86382788f2ba79f49'
 	'fdbff0f87013bcfe02a3958ba1dfe62fb875127fa39f83c571b57ae0427c7b38'
-	'fb0b0b97b98245a3f39c7dff824e6bb54499459ca787eed44d0e3819ae5bf1c8'
+	'926f23b9470143bcbba942025c2bdfd551840fd539c1e8fa05fbe67b97959e76'
 	'ac78e6c9ca0742f9112ef512dcf3a69fbfd16093f148bbbff7c04e44ae23ffed'
 	'SKIP'
 	'bb0abba87750662569e26d36076edaad2911c632de05b052d29f9ee5b4177081'
 	'c7881757fc4fae1860026b360a820cc6436f6dc3c30a248e29ba6e7caf099cbc'
 	'6828b4b329d7567903edd30e6777cff596070c49fb15b34b0ac093afef011311'
-	'ef944bfe6de9d0c56d59cc2b01a6afd89282a76c3d7479b2e66cb7ce282309db')
+	'1abccc05eb05dbd17542f93342f51b4d70dcb0bcd019c1c9eae37a0bc5849da9')
 validpgpkeys=('65EEFE022108E2B708CBFCF7F9E712E59AF5F22A') # Daniel Micay <danielmicay@gmail.com>
 
 build() {

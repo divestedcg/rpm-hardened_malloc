@@ -14,7 +14,7 @@ Upstream Project
 
 Compatibility
 -------------
-- Fedora 38/39/etc.
+- Fedora 39/40/etc.
 - Arch Linux
 
 Prebuilts
@@ -36,7 +36,7 @@ Three variants are included compiled for four different micro-architectures:
 	- prioritizes CPU and memory usage, fails six tests
 		- disables the slab quarantines, write after free check, slot randomization, and raises the guard slab interval from 1 to 8
 
-The current default is memefficient.
+The current default is default, although memefficient is recommended for systems with less than 4GB of RAM.
 
 Known Issues
 ------------
@@ -67,7 +67,7 @@ Known Issues
 - dnf may crash on large transactions, especially (offline) system-upgrade
 	- please disable/remove it temporarily before invoking the update
 - There is an included `nohm` alias to start programs without it
-- You can also fetch journald output with `gethmlogs`
+- You can also fetch journald output with `gethmlogs` or `gethmlogsall` for current boot or all boots respectively
 
 License
 -------

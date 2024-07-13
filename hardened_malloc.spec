@@ -2,7 +2,7 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 11%{?dist}
+Release: 12%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/12
 Source1: opt.patch
 Source2: ld.so.preload
