@@ -2,10 +2,9 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 12%{?dist}
+Release: 13%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/12
 Source1: opt.patch
-Source2: ld.so.preload
 Source3: hardened_malloc.conf
 Source4: LICENSE-library
 Source5: LICENSE-spec
@@ -18,6 +17,22 @@ Version: 12
 
 %description
 Hardened allocator designed for modern systems
+
+%posttrans
+totalRAM=$(free -m | awk '/^Mem:/{print $2}');
+if [ "$totalRAM" -gt "12000" ]; then
+echo "Enabling hardened_malloc globally with -default due to 12GB+ total system RAM";
+echo "libhardened_malloc.so" > /etc/ld.so.preload;
+else
+echo "Enabling hardened_malloc globally with -memefficient due to <12GB total system RAM";
+echo "libhardened_malloc-memefficient.so" > /etc/ld.so.preload;
+fi;
+
+%postun
+if [ "$1" == "0" ]; then
+echo "Removing ld.so.preload";
+rm /etc/ld.so.preload;
+fi;
 
 %prep
 %define _srcdir hardened_malloc
@@ -86,7 +101,6 @@ install -Dm4644 "%{_srcdir}/out-memefficient-x86-64-v2/libhardened_malloc-memeff
 install -Dm4644 "%{_srcdir}/out-memefficient-x86-64-v3/libhardened_malloc-memefficient-x86-64-v3.so" %{buildroot}/lib64/glibc-hwcaps/x86-64-v3/libhardened_malloc-memefficient.so;
 install -Dm4644 "%{_srcdir}/out-memefficient-x86-64-v4/libhardened_malloc-memefficient-x86-64-v4.so" %{buildroot}/lib64/glibc-hwcaps/x86-64-v4/libhardened_malloc-memefficient.so;
 
-install -Dm644 "%{SOURCE2}" %{buildroot}%{_sysconfdir}/ld.so.preload;
 install -Dm644 "%{SOURCE3}" %{buildroot}%{_sysconfdir}/sysctl.d/hardened_malloc.conf;
 
 install -Dm644 "%{SOURCE4}" %{buildroot}/usr/share/doc/hardened_malloc/LICENSE-library;
@@ -101,7 +115,6 @@ install -Dm644 "%{SOURCE7}" %{buildroot}/usr/lib/systemd/system/virtqemud.servic
 install -Dm644 "%{SOURCE8}" %{buildroot}/etc/profile.d/hardened_malloc_helpers.sh;
 
 %files
-%{_sysconfdir}/ld.so.preload
 %{_sysconfdir}/sysctl.d/hardened_malloc.conf
 /lib64/libhardened_malloc.so
 /lib64/libhardened_malloc-light.so

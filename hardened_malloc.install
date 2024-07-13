@@ -1,0 +1,15 @@
+post_install() {
+	totalRAM=$(free -m | awk '/^Mem:/{print $2}');
+	if [ "$totalRAM" -gt "12000" ]; then
+		echo "Enabling hardened_malloc globally with -default due to 12GB+ total system RAM";
+		echo "libhardened_malloc.so" > /etc/ld.so.preload;
+	else
+		echo "Enabling hardened_malloc globally with -memefficient due to <12GB total system RAM";
+		echo "libhardened_malloc-memefficient.so" > /etc/ld.so.preload;
+	fi;
+}
+
+post_remove() {
+	echo "Removing ld.so.preload";
+	rm /etc/ld.so.preload;
+}
