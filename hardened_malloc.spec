@@ -2,7 +2,7 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 13%{?dist}
+Release: 14%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/12
 Source1: opt.patch
 Source3: hardened_malloc.conf
@@ -20,7 +20,7 @@ Hardened allocator designed for modern systems
 
 %posttrans
 totalRAM=$(free -m | awk '/^Mem:/{print $2}');
-if [ "$totalRAM" -gt "12000" ]; then
+if [ "$totalRAM" -gt "11500" ]; then
 echo "Enabling hardened_malloc globally with -default due to 12GB+ total system RAM";
 echo "libhardened_malloc.so" > /etc/ld.so.preload;
 else

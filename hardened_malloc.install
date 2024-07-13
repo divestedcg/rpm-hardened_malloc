@@ -1,6 +1,6 @@
 post_install() {
 	totalRAM=$(free -m | awk '/^Mem:/{print $2}');
-	if [ "$totalRAM" -gt "12000" ]; then
+	if [ "$totalRAM" -gt "11500" ]; then
 		echo "Enabling hardened_malloc globally with -default due to 12GB+ total system RAM";
 		echo "libhardened_malloc.so" > /etc/ld.so.preload;
 	else
