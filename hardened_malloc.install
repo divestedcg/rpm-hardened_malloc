@@ -1,10 +1,15 @@
 post_install() {
 	totalRAM=$(free -m | awk '/^Mem:/{print $2}');
 	if [ "$totalRAM" -gt "11500" ]; then
-		echo "Enabling hardened_malloc globally with -default due to 12GB+ total system RAM";
-		echo "libhardened_malloc.so" > /etc/ld.so.preload;
+		#if grep -q " pku " /proc/cpuinfo; then
+		#	echo "Enabling hardened_malloc with -mpk variant";
+		#	echo "libhardened_malloc-mpk.so" > /etc/ld.so.preload;
+		#else
+			echo "Enabling hardened_malloc with -default variant";
+			echo "libhardened_malloc.so" > /etc/ld.so.preload;
+		#fi;
 	else
-		echo "Enabling hardened_malloc globally with -memefficient due to <12GB total system RAM";
+		echo "Enabling hardened_malloc with -memefficient variant";
 		echo "libhardened_malloc-memefficient.so" > /etc/ld.so.preload;
 	fi;
 }

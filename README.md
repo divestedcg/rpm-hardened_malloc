@@ -25,18 +25,29 @@ Prebuilts
 
 Included Variants
 -----------------
-Three variants are included compiled for four different micro-architectures:
+Four variants are included compiled for four different micro-architectures:
 
+- mpk
+	- prioritizes security, passes all tests
+		- protects allocator metadata using Memory Protection Keys
+		- needs processor support: `grep -q " pku " /proc/cpuinfo && echo "Supported" || echo "Not supported"`
+		- incompatible with systemd's default seccomp filter, no easy way to override
 - default
 	- prioritizes security, passes all tests
 - memefficient
 	- prioritizes memory usage, passes all tests
-		- decreases arenas used from 4 to 1 and disables extended size classes
+		- decreases arenas used from 4 to 1
+		- disables extended size classes
 - light
 	- prioritizes CPU and memory usage, fails six tests
-		- disables the slab quarantines, write after free check, slot randomization, and raises the guard slab interval from 1 to 8
+		- disables slab quarantines
+		- disables write after free check
+		- disables slot randomization
+		- raises the guard slab interval from 1 to 8
 
-The default is chosen at install time depending on total system RAM available: -default for 12GB+ systems and -memefficient for <12GB systems.
+The default is chosen at install time depending:
+- 12GB+ RAM: -default
+- <12GB RAM: -memefficient
 
 Known Issues
 ------------

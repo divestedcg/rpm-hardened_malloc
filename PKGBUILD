@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=12
-pkgrel=14
+pkgrel=15
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -12,7 +12,8 @@ makedepends=('git')
 checkdepends=('python')
 provides=('libhardened_malloc.so' 'libhardened_malloc-light.so')
 source=("git+https://github.com/GrapheneOS/$pkgname#tag=$pkgver?signed"
-	"opt.patch"
+	"0001-opt.patch"
+	"0002-graceful_pkey.patch"
 	"ld.so.preload"
 	"hardened_malloc.conf"
 	"LICENSE-library"
@@ -21,6 +22,7 @@ source=("git+https://github.com/GrapheneOS/$pkgname#tag=$pkgver?signed"
 	"hardened_malloc_helpers.sh")
 sha256sums=('SKIP'
 	'c85c8ab49bfb96237567a059376603e1c29ea2626d0696d86382788f2ba79f49'
+	'9af3b434d273ba93840ee613fb36cacd947dfc8a73fbee42e049869becf6f1d0'
 	'fdbff0f87013bcfe02a3958ba1dfe62fb875127fa39f83c571b57ae0427c7b38'
 	'926f23b9470143bcbba942025c2bdfd551840fd539c1e8fa05fbe67b97959e76'
 	'ac78e6c9ca0742f9112ef512dcf3a69fbfd16093f148bbbff7c04e44ae23ffed'
@@ -34,7 +36,8 @@ install=hardened_malloc.install
 
 build() {
 	cd "$pkgname"
-	patch -p1 < ../opt.patch;
+	patch -p1 < ../0001-opt.patch;
+	#patch -p1 < ../0002-graceful_pkey.patch;
 
 	ln -s default.mk config/default-x86-64.mk;
 	ln -s default.mk config/default-x86-64-v2.mk;
@@ -55,6 +58,14 @@ build() {
 	ln -s memefficient.mk config/memefficient-x86-64-v3.mk;
 	ln -s memefficient.mk config/memefficient-x86-64-v4.mk;
 
+	#add a Memory Protection Keys variant
+	cp config/default.mk config/mpk.mk;
+	sed -i 's/CONFIG_SEAL_METADATA := false/CONFIG_SEAL_METADATA := true/' config/mpk.mk;
+	ln -s mpk.mk config/mpk-x86-64.mk;
+	ln -s mpk.mk config/mpk-x86-64-v2.mk;
+	ln -s mpk.mk config/mpk-x86-64-v3.mk;
+	ln -s mpk.mk config/mpk-x86-64-v4.mk;
+
 	make CONFIG_NATIVE=false CONFIG_WERROR=false VARIANT=default;
 	make CONFIG_NATIVE=false CONFIG_X86_64=true CONFIG_WERROR=false VARIANT=default-x86-64;
 	make CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=default-x86-64-v2;
@@ -72,6 +83,12 @@ build() {
 	make CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=memefficient-x86-64-v2;
 	make CONFIG_NATIVE=false CONFIG_X86_64_V3=true CONFIG_WERROR=false VARIANT=memefficient-x86-64-v3;
 	make CONFIG_NATIVE=false CONFIG_X86_64_V4=true CONFIG_WERROR=false VARIANT=memefficient-x86-64-v4;
+
+	make CONFIG_NATIVE=false CONFIG_WERROR=false VARIANT=mpk;
+	make CONFIG_NATIVE=false CONFIG_X86_64=true CONFIG_WERROR=false VARIANT=mpk-x86-64;
+	make CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=mpk-x86-64-v2;
+	make CONFIG_NATIVE=false CONFIG_X86_64_V3=true CONFIG_WERROR=false VARIANT=mpk-x86-64-v3;
+	make CONFIG_NATIVE=false CONFIG_X86_64_V4=true CONFIG_WERROR=false VARIANT=mpk-x86-64-v4;
 }
 
 package() {
@@ -93,6 +110,12 @@ package() {
 	install -Dm4644 "out-memefficient-x86-64-v2/libhardened_malloc-memefficient-x86-64-v2.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v2/libhardened_malloc-memefficient.so;
 	install -Dm4644 "out-memefficient-x86-64-v3/libhardened_malloc-memefficient-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc-memefficient.so;
 	install -Dm4644 "out-memefficient-x86-64-v4/libhardened_malloc-memefficient-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc-memefficient.so;
+
+	install -Dm4644 "out-mpk/libhardened_malloc-mpk.so" "$pkgdir"/usr/lib/libhardened_malloc-mpk.so;
+	install -Dm4644 "out-mpk-x86-64/libhardened_malloc-mpk-x86-64.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64/libhardened_malloc-mpk.so;
+	install -Dm4644 "out-mpk-x86-64-v2/libhardened_malloc-mpk-x86-64-v2.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v2/libhardened_malloc-mpk.so;
+	install -Dm4644 "out-mpk-x86-64-v3/libhardened_malloc-mpk-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc-mpk.so;
+	install -Dm4644 "out-mpk-x86-64-v4/libhardened_malloc-mpk-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc-mpk.so;
 
 	install -Dm644 ../ld.so.preload "$pkgdir"/etc/ld.so.preload;
 	install -Dm644 ../hardened_malloc.conf "$pkgdir"/etc/sysctl.d/hardened_malloc.conf;
