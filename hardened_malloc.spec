@@ -52,6 +52,9 @@ cd %{_srcdir};
 patch -p1 < %{SOURCE1};
 #patch -p1 < %{SOURCE2};
 
+#enable UBsan in all variants
+#sed -i 's/CONFIG_UBSAN := false/CONFIG_UBSAN := true/' config/*.mk;
+
 ln -s default.mk config/default-x86-64.mk;
 ln -s default.mk config/default-x86-64-v2.mk;
 ln -s default.mk config/default-x86-64-v3.mk;
