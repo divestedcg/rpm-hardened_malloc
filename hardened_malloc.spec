@@ -3,7 +3,7 @@ BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
 Release: 1%{?dist}
-Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/2024101200
+Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/2025012700
 Source1: 0001-opt.patch
 Source2: 0002-graceful_pkey.patch
 Source3: hardened_malloc.conf
@@ -15,7 +15,7 @@ Source8: hardened_malloc_helpers.sh
 Source9: 0242-mseal.patch
 Summary: Hardened memory allocator from GrapheneOS
 URL: https://github.com/GrapheneOS/hardened_malloc
-Version: 2024101200
+Version: 2025012700
 
 %description
 Hardened allocator designed for modern systems
