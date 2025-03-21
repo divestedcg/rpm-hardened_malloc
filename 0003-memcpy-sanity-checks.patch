@@ -1,0 +1,63 @@
+diff --git a/h_malloc.c b/h_malloc.c
+index 6221d0b..9895283 100644
+--- a/h_malloc.c
++++ b/h_malloc.c
+@@ -1873,6 +1873,35 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
+ 
+     return SIZE_MAX;
+ }
++EXPORT void *h_memcpy(void *dst, const void *src, size_t len) {
++    //if (len == 0) { // technically valid
++    //    fatal_error("memcpy: length is zero");
++    //}
++    if (dst == NULL) {
++        fatal_error("memcpy: destination is null");
++    }
++    if (src == NULL) {
++        fatal_error("memcpy: source is null");
++    }
++    if (len > malloc_object_size(src)) {
++        fatal_error("memcpy: length greater than source");
++    }
++    if (len > malloc_object_size(dst)) {
++        fatal_error("memcpy: destination too small");
++    }
++
++    if (dst == src) {
++        return dst;
++    }
++
++    char *d = (char *)dst;
++    const char *s = (const char *)src;
++    for (size_t i = 0; i < len; ++i) {
++        d[i] = s[i];
++    }
++
++    return dst;
++}
+ 
+ EXPORT int h_mallopt(UNUSED int param, UNUSED int value) {
+ #ifdef __ANDROID__
+diff --git a/include/h_malloc.h b/include/h_malloc.h
+index 0eee395..3f05f87 100644
+--- a/include/h_malloc.h
++++ b/include/h_malloc.h
+@@ -11,6 +11,7 @@ extern "C" {
+ 
+ #ifndef H_MALLOC_PREFIX
+ #define h_malloc malloc
++#define h_memcpy memcpy
+ #define h_calloc calloc
+ #define h_realloc realloc
+ #define h_aligned_alloc aligned_alloc
+@@ -54,6 +55,7 @@ __attribute__((alloc_size(2))) void *h_realloc(void *ptr, size_t size);
+ __attribute__((malloc)) __attribute__((alloc_size(2))) __attribute__((alloc_align(1)))
+ void *h_aligned_alloc(size_t alignment, size_t size);
+ void h_free(void *ptr);
++void *h_memcpy(void *dstpp, const void *srcpp, size_t len);
+ 
+ // POSIX
+ int h_posix_memalign(void **memptr, size_t alignment, size_t size);
+-- 
+2.49.0
+

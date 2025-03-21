@@ -13,6 +13,7 @@ Source6: README.md
 Source7: hardened_malloc_disable.conf
 Source8: hardened_malloc_helpers.sh
 Source9: 0242-mseal.patch
+Source10: 0003-memcpy-sanity-checks.patch
 Summary: Hardened memory allocator from GrapheneOS
 URL: https://github.com/GrapheneOS/hardened_malloc
 Version: 2025012700
@@ -53,9 +54,7 @@ cd %{_srcdir};
 patch -p1 < %{SOURCE1};
 #patch -p1 < %{SOURCE2};
 patch -p1 < %{SOURCE9};
-
-#enable UBsan in all variants
-#sed -i 's/CONFIG_UBSAN := false/CONFIG_UBSAN := true/' config/*.mk;
+#patch -p1 < %{SOURCE10};
 
 ln -s default.mk config/default-x86-64.mk;
 ln -s default.mk config/default-x86-64-v2.mk;
