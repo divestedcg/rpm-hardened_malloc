@@ -13,7 +13,7 @@ Source6: README.md
 Source7: hardened_malloc_disable.conf
 Source8: hardened_malloc_helpers.sh
 Source9: 0242-mseal.patch
-Source10: 0003-memcpy-sanity-checks.patch
+Source10: 0252-memcpy-sanity.patch
 Summary: Hardened memory allocator from GrapheneOS
 URL: https://github.com/GrapheneOS/hardened_malloc
 Version: 2025012700
