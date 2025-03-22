@@ -1,0 +1,225 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Tavi <tavi@divested.dev>
+Date: Fri, 21 Mar 2025 18:49:36 -0400
+Subject: [PATCH] perform size checks on memcpy/memmove/memset
+
+- memset is disabled for now as it causes hangs
+- underlying functions were copied from isoalloc, licensed Apache-2.0
+  - credit Chris Rohlf for memcpy/memset
+  - credit David Carlier for memmove
+
+Signed-off-by: Tavi <tavi@divested.dev>
+---
+ Android.bp         |  1 +
+ CREDITS            |  6 ++++
+ Makefile           |  7 ++++-
+ README.md          |  4 +++
+ config/default.mk  |  1 +
+ config/light.mk    |  1 +
+ h_malloc.c         | 74 ++++++++++++++++++++++++++++++++++++++++++++++
+ include/h_malloc.h | 13 ++++++++
+ 8 files changed, 106 insertions(+), 1 deletion(-)
+
+diff --git a/Android.bp b/Android.bp
+index f6a7a9c..a2bab52 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -28,6 +28,7 @@ common_cflags = [
+     "-DN_ARENA=1",
+     "-DCONFIG_STATS=true",
+     "-DCONFIG_SELF_INIT=false",
++    "-DCONFIG_BLOCK_OPS_CHECK_SIZE=false",
+ ]
+ 
+ cc_defaults {
+diff --git a/CREDITS b/CREDITS
+index 31b6875..1832cc5 100644
+--- a/CREDITS
++++ b/CREDITS
+@@ -23,6 +23,12 @@ h_malloc.c open-addressed hash table (regions_grow, regions_insert, regions_find
+     ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+     OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ 
++h_malloc.c block operations (h_memcpy_real, h_memmove_real, h_memset_real):
++
++    Copyright (C) 2022, 2023 struct <chris.rohlf@gmail.com>
++    Copyright (C) 2023 David Carlier <devnexen@gmail.com>
++    Apache-2.0
++
+ libdivide:
+ 
+     Copyright (C) 2010 - 2019 ridiculous_fish, <libdivide@ridiculousfish.com>
+diff --git a/Makefile b/Makefile
+index f33f88e..37d35f7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -89,6 +89,10 @@ ifeq (,$(filter $(CONFIG_SELF_INIT),true false))
+     $(error CONFIG_SELF_INIT must be true or false)
+ endif
+ 
++ifeq (,$(filter $(CONFIG_BLOCK_OPS_CHECK_SIZE),true false))
++    $(error CONFIG_BLOCK_OPS_CHECK_SIZE must be true or false)
++endif
++
+ CPPFLAGS += \
+     -DCONFIG_SEAL_METADATA=$(CONFIG_SEAL_METADATA) \
+     -DZERO_ON_FREE=$(CONFIG_ZERO_ON_FREE) \
+@@ -108,7 +112,8 @@ CPPFLAGS += \
+     -DCONFIG_CLASS_REGION_SIZE=$(CONFIG_CLASS_REGION_SIZE) \
+     -DN_ARENA=$(CONFIG_N_ARENA) \
+     -DCONFIG_STATS=$(CONFIG_STATS) \
+-    -DCONFIG_SELF_INIT=$(CONFIG_SELF_INIT)
++    -DCONFIG_SELF_INIT=$(CONFIG_SELF_INIT) \
++    -DCONFIG_BLOCK_OPS_CHECK_SIZE=$(CONFIG_BLOCK_OPS_CHECK_SIZE)
+ 
+ $(OUT)/libhardened_malloc$(SUFFIX).so: $(OBJECTS) | $(OUT)
+ 	$(CC) $(CFLAGS) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
+diff --git a/README.md b/README.md
+index 6a1a91b..5c34eb0 100644
+--- a/README.md
++++ b/README.md
+@@ -276,6 +276,10 @@ The following boolean configuration options are available:
+   hardware, which may become drastically lower in the future. Whether or not
+   this feature is enabled, the metadata is all contained within an isolated
+   memory region with high entropy random guard regions around it.
++* `CONFIG_BLOCK_OPS_CHECK_SIZE`: `true` or `false` (default) to ensure length
++  parameter of the memcpy/memmove/memset block operations are within bounds
++  to prevent buffer overflows. Note, memset override is currently disabled
++  due to improper behavior.
+ 
+ The following integer configuration options are available:
+ 
+diff --git a/config/default.mk b/config/default.mk
+index 71b1cc4..b139c43 100644
+--- a/config/default.mk
++++ b/config/default.mk
+@@ -21,3 +21,4 @@ CONFIG_CLASS_REGION_SIZE := 34359738368 # 32GiB
+ CONFIG_N_ARENA := 4
+ CONFIG_STATS := false
+ CONFIG_SELF_INIT := true
++CONFIG_BLOCK_OPS_CHECK_SIZE := false
+diff --git a/config/light.mk b/config/light.mk
+index 88a0e1f..7edd423 100644
+--- a/config/light.mk
++++ b/config/light.mk
+@@ -21,3 +21,4 @@ CONFIG_CLASS_REGION_SIZE := 34359738368 # 32GiB
+ CONFIG_N_ARENA := 4
+ CONFIG_STATS := false
+ CONFIG_SELF_INIT := true
++CONFIG_BLOCK_OPS_CHECK_SIZE := false
+diff --git a/h_malloc.c b/h_malloc.c
+index 6221d0b..607e9bb 100644
+--- a/h_malloc.c
++++ b/h_malloc.c
+@@ -1874,6 +1874,80 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
+     return SIZE_MAX;
+ }
+ 
++#if CONFIG_BLOCK_OPS_CHECK_SIZE
++void *h_memcpy_real(void *dst, const void *src, size_t len) {
++    char *p_dst = (char *) dst;
++    char const *p_src = (char const *) src;
++
++    while(len--) {
++        *p_dst++ = *p_src++;
++    }
++
++    return dst;
++}
++
++EXPORT void *h_memcpy(void *dst, const void *src, size_t len) {
++    if (len > malloc_object_size(src)) {
++        fatal_error("memcpy read overflow");
++    }
++    if (len > malloc_object_size(dst)) {
++        fatal_error("memcpy buffer overflow");
++    }
++
++    return h_memcpy_real(dst, src, len);
++}
++
++void *h_memmove_real(void *dst, const void *src, size_t len) {
++    char *p_dst = (char *) dst;
++    char const *p_src = (char const *) src;
++
++    if(dst == src) {
++        return dst;
++    }
++
++    if(p_src < p_dst) {
++        p_dst += len;
++        p_src += len;
++        while(len--) {
++            *--p_dst = *--p_src;
++        }
++    } else {
++        dst = h_memcpy(dst, src, len);
++    }
++
++    return dst;
++}
++
++EXPORT void *h_memmove(void *dst, const void *src, size_t len) {
++    if (len > malloc_object_size(src)) {
++        fatal_error("memmove read overflow");
++    }
++    if (len > malloc_object_size(dst)) {
++        fatal_error("memmove buffer overflow");
++    }
++
++    return h_memmove_real(dst, src, len);
++}
++
++void *h_memset_real(void *dst, int value, size_t len) {
++    char *p_dst = (char *) dst;
++
++    while(len--) {
++        *p_dst++ = value;
++    }
++
++    return dst;
++}
++
++EXPORT void *h_memset(void *dst, int value, size_t len) {
++    if (len > malloc_object_size(dst)) {
++        fatal_error("memset buffer overflow");
++    }
++
++    return h_memset_real(dst, value, len);
++}
++#endif
++
+ EXPORT int h_mallopt(UNUSED int param, UNUSED int value) {
+ #ifdef __ANDROID__
+     if (param == M_PURGE) {
+diff --git a/include/h_malloc.h b/include/h_malloc.h
+index 0eee395..48a24e1 100644
+--- a/include/h_malloc.h
++++ b/include/h_malloc.h
+@@ -15,6 +15,11 @@ extern "C" {
+ #define h_realloc realloc
+ #define h_aligned_alloc aligned_alloc
+ #define h_free free
++#if CONFIG_BLOCK_OPS_CHECK_SIZE
++#define h_memcpy memcpy
++#define h_memmove memmove
++//#define h_memset memset
++#endif
+ 
+ #define h_posix_memalign posix_memalign
+ 
+@@ -54,6 +59,14 @@ __attribute__((alloc_size(2))) void *h_realloc(void *ptr, size_t size);
+ __attribute__((malloc)) __attribute__((alloc_size(2))) __attribute__((alloc_align(1)))
+ void *h_aligned_alloc(size_t alignment, size_t size);
+ void h_free(void *ptr);
++#if CONFIG_BLOCK_OPS_CHECK_SIZE
++void *h_memcpy_real(void *dst, const void *src, size_t len);
++void *h_memcpy(void *dst, const void *src, size_t len);
++void *h_memmove_real(void *dst, const void *src, size_t len);
++void *h_memmove(void *dst, const void *src, size_t len);
++void *h_memset_real(void *dst, int value, size_t len);
++void *h_memset(void *dst, int value, size_t len);
++#endif
+ 
+ // POSIX
+ int h_posix_memalign(void **memptr, size_t alignment, size_t size);
