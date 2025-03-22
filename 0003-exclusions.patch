@@ -1,0 +1,76 @@
+diff --git a/h_malloc.c b/h_malloc.c
+index f2f6d2a..9e16ca3 100644
+--- a/h_malloc.c
++++ b/h_malloc.c
+@@ -80,6 +80,7 @@ static union {
+ #ifdef MEMTAG
+         bool is_memtag_disabled;
+ #endif
++        bool are_block_operation_size_checks_enabled;
+     };
+     char padding[PAGE_SIZE];
+ } ro __attribute__((aligned(PAGE_SIZE)));
+@@ -1210,6 +1211,18 @@ static inline void enforce_init(void) {
+     }
+ }
+ 
++COLD static void handle_bugs(void) {
++    char path[256];
++    if (readlink("/proc/self/exe", path, sizeof(path)) == -1) {
++        return;
++    }
++
++    if (strcmp("/usr/bin/chromium-browser", path) == 0 ||
++            strcmp("/opt/Mullvad VPN/mullvad-gui", path) == 0) {
++        ro.are_block_operation_size_checks_enabled = false;
++    }
++}
++
+ static struct mutex init_lock = MUTEX_INITIALIZER;
+ 
+ COLD static void init_slow_path(void) {
+@@ -1225,6 +1238,9 @@ COLD static void init_slow_path(void) {
+     ro.metadata_pkey = pkey_alloc(0, 0);
+ #endif
+ 
++    ro.are_block_operation_size_checks_enabled = true;
++    handle_bugs();
++
+     if (unlikely(sysconf(_SC_PAGESIZE) != PAGE_SIZE)) {
+         fatal_error("runtime page size does not match compile-time page size which is not supported");
+     }
+@@ -1887,10 +1903,10 @@ void *h_memcpy_real(void *dst, const void *src, size_t len) {
+ }
+ 
+ EXPORT void *h_memcpy(void *dst, const void *src, size_t len) {
+-    if (len > malloc_object_size_fast(src)) {
++    if (len > malloc_object_size_fast(src) && ro.are_block_operation_size_checks_enabled) {
+         fatal_error("memcpy read overflow");
+     }
+-    if (len > malloc_object_size_fast(dst)) {
++    if (len > malloc_object_size_fast(dst) && ro.are_block_operation_size_checks_enabled) {
+         fatal_error("memcpy buffer overflow");
+     }
+ 
+@@ -1919,10 +1935,10 @@ void *h_memmove_real(void *dst, const void *src, size_t len) {
+ }
+ 
+ EXPORT void *h_memmove(void *dst, const void *src, size_t len) {
+-    if (len > malloc_object_size_fast(src)) {
++    if (len > malloc_object_size_fast(src) && ro.are_block_operation_size_checks_enabled) {
+         fatal_error("memmove read overflow");
+     }
+-    if (len > malloc_object_size_fast(dst)) {
++    if (len > malloc_object_size_fast(dst) && ro.are_block_operation_size_checks_enabled) {
+         fatal_error("memmove buffer overflow");
+     }
+ 
+@@ -1940,7 +1956,7 @@ void *h_memset_real(void *dst, int value, size_t len) {
+ }
+ 
+ EXPORT void *h_memset(void *dst, int value, size_t len) {
+-    if (len > malloc_object_size_fast(dst)) {
++    if (len > malloc_object_size_fast(dst) && ro.are_block_operation_size_checks_enabled) {
+         fatal_error("memset buffer overflow");
+     }
+ 

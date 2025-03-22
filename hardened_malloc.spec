@@ -2,7 +2,7 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 6%{?dist}
+Release: 7%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/2025012700
 Source1: 0001-opt.patch
 Source2: 0002-graceful_pkey.patch
@@ -14,6 +14,7 @@ Source7: hardened_malloc_disable.conf
 Source8: hardened_malloc_helpers.sh
 Source9: 0242-mseal.patch
 Source10: 0252-blockops-size.patch
+Source11: 0003-exclusions.patch
 Summary: Hardened memory allocator from GrapheneOS
 URL: https://github.com/GrapheneOS/hardened_malloc
 Version: 2025012700
@@ -55,6 +56,7 @@ patch -p1 < %{SOURCE1};
 #patch -p1 < %{SOURCE2};
 patch -p1 < %{SOURCE9};
 patch -p1 < %{SOURCE10};
+patch -p1 < %{SOURCE11};
 
 ln -s default.mk config/default-x86-64.mk;
 ln -s default.mk config/default-x86-64-v2.mk;
