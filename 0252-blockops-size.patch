@@ -75,7 +75,7 @@ index f33f88e..37d35f7 100644
  $(OUT)/libhardened_malloc$(SUFFIX).so: $(OBJECTS) | $(OUT)
  	$(CC) $(CFLAGS) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
 diff --git a/README.md b/README.md
-index 6a1a91b..5c34eb0 100644
+index 6a1a91b..0f96544 100644
 --- a/README.md
 +++ b/README.md
 @@ -276,6 +276,10 @@ The following boolean configuration options are available:
@@ -83,9 +83,9 @@ index 6a1a91b..5c34eb0 100644
    this feature is enabled, the metadata is all contained within an isolated
    memory region with high entropy random guard regions around it.
 +* `CONFIG_BLOCK_OPS_CHECK_SIZE`: `true` or `false` (default) to ensure length
-+  parameter of the memcpy/memmove/memset block operations are within bounds
-+  to prevent buffer overflows. Note, memset override is currently disabled
-+  due to improper behavior.
++  parameter of the memcpy/memmove/memset block operations are within
++  approximate bounds to minimize buffer overflows. Note, memset override is
++  currently disabled due to improper behavior.
  
  The following integer configuration options are available:
  
@@ -108,7 +108,7 @@ index 88a0e1f..7edd423 100644
  CONFIG_SELF_INIT := true
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index 6221d0b..607e9bb 100644
+index 6221d0b..017a250 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -1874,6 +1874,80 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
@@ -117,8 +117,8 @@ index 6221d0b..607e9bb 100644
  
 +#if CONFIG_BLOCK_OPS_CHECK_SIZE
 +void *h_memcpy_real(void *dst, const void *src, size_t len) {
-+    char *p_dst = (char *) dst;
-+    char const *p_src = (char const *) src;
++    char *p_dst = (char *)dst;
++    char const *p_src = (char const *)src;
 +
 +    while(len--) {
 +        *p_dst++ = *p_src++;
@@ -139,8 +139,8 @@ index 6221d0b..607e9bb 100644
 +}
 +
 +void *h_memmove_real(void *dst, const void *src, size_t len) {
-+    char *p_dst = (char *) dst;
-+    char const *p_src = (char const *) src;
++    char *p_dst = (char *)dst;
++    char const *p_src = (char const *)src;
 +
 +    if(dst == src) {
 +        return dst;
@@ -171,7 +171,7 @@ index 6221d0b..607e9bb 100644
 +}
 +
 +void *h_memset_real(void *dst, int value, size_t len) {
-+    char *p_dst = (char *) dst;
++    char *p_dst = (char *)dst;
 +
 +    while(len--) {
 +        *p_dst++ = value;

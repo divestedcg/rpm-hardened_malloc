@@ -23,6 +23,13 @@ Prebuilts
 - Fedora via CI: https://gitlab.com/divested/rpm-hardened_malloc/-/jobs/artifacts/master/browse?job=build_rpm
 - Arch via CI: TODO
 
+Modifications
+-------------
+- mseal is used for some allocator data
+	- https://github.com/GrapheneOS/hardened_malloc/pull/242
+- memcpy/memmove are overridden and have size checks performed
+	- https://github.com/GrapheneOS/hardened_malloc/pull/252
+
 Included Variants
 -----------------
 Four variants are included compiled for four different micro-architectures:
@@ -34,8 +41,6 @@ Four variants are included compiled for four different micro-architectures:
 		- incompatible with systemd's default seccomp filter, no easy way to override
 - default
 	- prioritizes security, passes all tests
-- bos
-	- same as default, but overrides memcpy/memmove and performs size checks, experimental
 - memefficient
 	- prioritizes memory usage, passes all tests
 		- decreases arenas used from 4 to 1
