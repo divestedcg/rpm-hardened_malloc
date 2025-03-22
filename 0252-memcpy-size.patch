@@ -1,5 +1,5 @@
 diff --git a/h_malloc.c b/h_malloc.c
-index 6221d0bc..4a35007d 100644
+index 6221d0b..1f0f504 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -1874,6 +1874,27 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
@@ -8,10 +8,10 @@ index 6221d0bc..4a35007d 100644
  
 +EXPORT void *h_memcpy(void *dst, const void *src, size_t len) {
 +    if (len > malloc_object_size(src)) {
-+        fatal_error("memcpy: length greater than source");
++        fatal_error("memcpy read overflow");
 +    }
 +    if (len > malloc_object_size(dst)) {
-+        fatal_error("memcpy: destination too small");
++        fatal_error("memcpy buffer overflow");
 +    }
 +
 +    if (dst == src) {
@@ -31,7 +31,7 @@ index 6221d0bc..4a35007d 100644
  #ifdef __ANDROID__
      if (param == M_PURGE) {
 diff --git a/include/h_malloc.h b/include/h_malloc.h
-index 0eee3956..4e1ee5b4 100644
+index 0eee395..4e1ee5b 100644
 --- a/include/h_malloc.h
 +++ b/include/h_malloc.h
 @@ -15,6 +15,7 @@ extern "C" {

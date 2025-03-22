@@ -34,6 +34,8 @@ Four variants are included compiled for four different micro-architectures:
 		- incompatible with systemd's default seccomp filter, no easy way to override
 - default
 	- prioritizes security, passes all tests
+- memcpy
+	- same as default, but overrides memcpy and performs size checks, experimental
 - memefficient
 	- prioritizes memory usage, passes all tests
 		- decreases arenas used from 4 to 1
