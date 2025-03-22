@@ -7,6 +7,7 @@ Subject: [PATCH] perform size checks on memcpy/memmove/memset
 - underlying functions were copied from isoalloc, licensed Apache-2.0
 	- credit Chris Rohlf for memcpy/memset
 	- credit David Carlier for memmove
+- use the fast path as some programs crash otherwise
 
 Signed-off-by: Tavi <tavi@divested.dev>
 ---
@@ -90,14 +91,14 @@ index f33f88e..37d35f7 100644
  $(OUT)/libhardened_malloc$(SUFFIX).so: $(OBJECTS) | $(OUT)
  	$(CC) $(CFLAGS) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
 diff --git a/README.md b/README.md
-index 6a1a91b..416c976 100644
+index 6a1a91b..0f96544 100644
 --- a/README.md
 +++ b/README.md
 @@ -276,6 +276,10 @@ The following boolean configuration options are available:
    hardware, which may become drastically lower in the future. Whether or not
    this feature is enabled, the metadata is all contained within an isolated
    memory region with high entropy random guard regions around it.
-+* `CONFIG_BLOCK_OPS_CHECK_SIZE`: `true` (default) or `false` to ensure length
++* `CONFIG_BLOCK_OPS_CHECK_SIZE`: `true` or `false` (default) to ensure length
 +  parameter of the memcpy/memmove/memset block operations are within
 +  approximate bounds to minimize buffer overflows. Note, memset override is
 +  currently disabled due to improper behavior.
@@ -105,14 +106,14 @@ index 6a1a91b..416c976 100644
  The following integer configuration options are available:
  
 diff --git a/config/default.mk b/config/default.mk
-index 71b1cc4..071e4d3 100644
+index 71b1cc4..b139c43 100644
 --- a/config/default.mk
 +++ b/config/default.mk
 @@ -21,3 +21,4 @@ CONFIG_CLASS_REGION_SIZE := 34359738368 # 32GiB
  CONFIG_N_ARENA := 4
  CONFIG_STATS := false
  CONFIG_SELF_INIT := true
-+CONFIG_BLOCK_OPS_CHECK_SIZE := true
++CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/config/light.mk b/config/light.mk
 index 88a0e1f..7edd423 100644
 --- a/config/light.mk
@@ -123,7 +124,7 @@ index 88a0e1f..7edd423 100644
  CONFIG_SELF_INIT := true
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index 6221d0b..017a250 100644
+index 6221d0b..f2f6d2a 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -1874,6 +1874,80 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
@@ -405,45 +406,45 @@ index 0000000..9850407
 +    return 0;
 +}
 diff --git a/test/test_smc.py b/test/test_smc.py
-index 170278e..b41e085 100644
+index 170278e..988e9ca 100644
 --- a/test/test_smc.py
 +++ b/test/test_smc.py
 @@ -238,5 +238,43 @@ class TestSimpleMemoryCorruption(unittest.TestCase):
              "realloc_init")
          self.assertEqual(returncode, 0)
  
-+    def test_memcpy_buffer_overflow(self):
-+        _stdout, stderr, returncode = self.run_test(
-+            "memcpy_buffer_overflow")
-+        self.assertEqual(returncode, -6)
-+        self.assertEqual(stderr.decode(
-+            "utf-8"), "fatal allocator error: memcpy buffer overflow\n")
++    #def test_memcpy_buffer_overflow(self):
++    #    _stdout, stderr, returncode = self.run_test(
++    #        "memcpy_buffer_overflow")
++    #    self.assertEqual(returncode, -6)
++    #    self.assertEqual(stderr.decode(
++    #        "utf-8"), "fatal allocator error: memcpy buffer overflow\n")
 +
-+    def test_memcpy_read_overflow(self):
-+        _stdout, stderr, returncode = self.run_test(
-+            "memcpy_read_overflow")
-+        self.assertEqual(returncode, -6)
-+        self.assertEqual(stderr.decode(
-+            "utf-8"), "fatal allocator error: memcpy read overflow\n")
++    #def test_memcpy_read_overflow(self):
++    #    _stdout, stderr, returncode = self.run_test(
++    #        "memcpy_read_overflow")
++    #    self.assertEqual(returncode, -6)
++    #    self.assertEqual(stderr.decode(
++    #        "utf-8"), "fatal allocator error: memcpy read overflow\n")
 +
 +    def test_memcpy_valid(self):
 +        _stdout, _stderr, returncode = self.run_test(
 +            "memcpy_valid")
 +        self.assertEqual(returncode, 0)
 +
-+    def test_memmove_buffer_overflow(self):
-+        _stdout, stderr, returncode = self.run_test(
-+            "memmove_buffer_overflow")
-+        self.assertEqual(returncode, -6)
-+        self.assertEqual(stderr.decode(
-+            "utf-8"), "fatal allocator error: memmove buffer overflow\n")
++    #def test_memmove_buffer_overflow(self):
++    #    _stdout, stderr, returncode = self.run_test(
++    #        "memmove_buffer_overflow")
++    #    self.assertEqual(returncode, -6)
++    #    self.assertEqual(stderr.decode(
++    #        "utf-8"), "fatal allocator error: memmove buffer overflow\n")
 +
-+    def test_memmove_read_overflow(self):
-+        _stdout, stderr, returncode = self.run_test(
-+            "memmove_read_overflow")
-+        self.assertEqual(returncode, -6)
-+        self.assertEqual(stderr.decode(
-+            "utf-8"), "fatal allocator error: memmove read overflow\n")
++    #def test_memmove_read_overflow(self):
++    #    _stdout, stderr, returncode = self.run_test(
++    #        "memmove_read_overflow")
++    #    self.assertEqual(returncode, -6)
++    #    self.assertEqual(stderr.decode(
++    #        "utf-8"), "fatal allocator error: memmove read overflow\n")
 +
 +    def test_memmove_valid(self):
 +        _stdout, _stderr, returncode = self.run_test(

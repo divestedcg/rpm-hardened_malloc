@@ -28,7 +28,6 @@ Modifications
 - mseal is used for some allocator data
 	- https://github.com/GrapheneOS/hardened_malloc/pull/242
 - memcpy/memmove are overridden to perform size checks, experimental
-	- adjusted to use fast path to reduce crashes
 	- https://github.com/GrapheneOS/hardened_malloc/pull/252
 
 Included Variants
