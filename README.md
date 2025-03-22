@@ -27,10 +27,13 @@ Modifications
 -------------
 - mseal is used for some allocator data
 	- https://github.com/GrapheneOS/hardened_malloc/pull/242
+- memcpy/memmove are overridden to perform size checks, experimental
+	- adjusted to use fast path to reduce crashes
+	- https://github.com/GrapheneOS/hardened_malloc/pull/252
 
 Included Variants
 -----------------
-Five variants are included compiled for four different micro-architectures:
+Four variants are included compiled for four different micro-architectures:
 
 - mpk
 	- prioritizes security, passes all tests
@@ -39,9 +42,6 @@ Five variants are included compiled for four different micro-architectures:
 		- incompatible with systemd's default seccomp filter, no easy way to override
 - default
 	- prioritizes security, passes all tests
-- bos
-	- same as default, but overrides memcpy/memmove and performs size checks, experimental
-	- https://github.com/GrapheneOS/hardened_malloc/pull/252
 - memefficient
 	- prioritizes memory usage, passes all tests
 		- decreases arenas used from 4 to 1

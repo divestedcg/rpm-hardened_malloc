@@ -1,24 +1,39 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Tavi <tavi@divested.dev>
-Date: Fri, 21 Mar 2025 18:49:36 -0400
+Date: Sat, 22 Mar 2025 02:54:10 -0400
 Subject: [PATCH] perform size checks on memcpy/memmove/memset
 
 - memset is disabled for now as it causes hangs
 - underlying functions were copied from isoalloc, licensed Apache-2.0
-  - credit Chris Rohlf for memcpy/memset
-  - credit David Carlier for memmove
+	- credit Chris Rohlf for memcpy/memset
+	- credit David Carlier for memmove
 
 Signed-off-by: Tavi <tavi@divested.dev>
 ---
- Android.bp         |  1 +
- CREDITS            |  6 ++++
- Makefile           |  7 ++++-
- README.md          |  4 +++
- config/default.mk  |  1 +
- config/light.mk    |  1 +
- h_malloc.c         | 74 ++++++++++++++++++++++++++++++++++++++++++++++
- include/h_malloc.h | 13 ++++++++
- 8 files changed, 106 insertions(+), 1 deletion(-)
+ Android.bp                     |  1 +
+ CREDITS                        |  6 +++
+ Makefile                       |  7 +++-
+ README.md                      |  4 ++
+ config/default.mk              |  1 +
+ config/light.mk                |  1 +
+ h_malloc.c                     | 74 ++++++++++++++++++++++++++++++++++
+ include/h_malloc.h             | 13 ++++++
+ test/.gitignore                |  6 +++
+ test/Makefile                  |  8 +++-
+ test/memcpy_buffer_overflow.c  | 16 ++++++++
+ test/memcpy_read_overflow.c    | 16 ++++++++
+ test/memcpy_valid.c            | 16 ++++++++
+ test/memmove_buffer_overflow.c | 16 ++++++++
+ test/memmove_read_overflow.c   | 16 ++++++++
+ test/memmove_valid.c           | 16 ++++++++
+ test/test_smc.py               | 38 +++++++++++++++++
+ 17 files changed, 253 insertions(+), 2 deletions(-)
+ create mode 100644 test/memcpy_buffer_overflow.c
+ create mode 100644 test/memcpy_read_overflow.c
+ create mode 100644 test/memcpy_valid.c
+ create mode 100644 test/memmove_buffer_overflow.c
+ create mode 100644 test/memmove_read_overflow.c
+ create mode 100644 test/memmove_valid.c
 
 diff --git a/Android.bp b/Android.bp
 index f6a7a9c..a2bab52 100644
@@ -75,14 +90,14 @@ index f33f88e..37d35f7 100644
  $(OUT)/libhardened_malloc$(SUFFIX).so: $(OBJECTS) | $(OUT)
  	$(CC) $(CFLAGS) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
 diff --git a/README.md b/README.md
-index 6a1a91b..0f96544 100644
+index 6a1a91b..416c976 100644
 --- a/README.md
 +++ b/README.md
 @@ -276,6 +276,10 @@ The following boolean configuration options are available:
    hardware, which may become drastically lower in the future. Whether or not
    this feature is enabled, the metadata is all contained within an isolated
    memory region with high entropy random guard regions around it.
-+* `CONFIG_BLOCK_OPS_CHECK_SIZE`: `true` or `false` (default) to ensure length
++* `CONFIG_BLOCK_OPS_CHECK_SIZE`: `true` (default) or `false` to ensure length
 +  parameter of the memcpy/memmove/memset block operations are within
 +  approximate bounds to minimize buffer overflows. Note, memset override is
 +  currently disabled due to improper behavior.
@@ -90,14 +105,14 @@ index 6a1a91b..0f96544 100644
  The following integer configuration options are available:
  
 diff --git a/config/default.mk b/config/default.mk
-index 71b1cc4..b139c43 100644
+index 71b1cc4..071e4d3 100644
 --- a/config/default.mk
 +++ b/config/default.mk
 @@ -21,3 +21,4 @@ CONFIG_CLASS_REGION_SIZE := 34359738368 # 32GiB
  CONFIG_N_ARENA := 4
  CONFIG_STATS := false
  CONFIG_SELF_INIT := true
-+CONFIG_BLOCK_OPS_CHECK_SIZE := false
++CONFIG_BLOCK_OPS_CHECK_SIZE := true
 diff --git a/config/light.mk b/config/light.mk
 index 88a0e1f..7edd423 100644
 --- a/config/light.mk
@@ -128,10 +143,10 @@ index 6221d0b..017a250 100644
 +}
 +
 +EXPORT void *h_memcpy(void *dst, const void *src, size_t len) {
-+    if (len > malloc_object_size(src)) {
++    if (len > malloc_object_size_fast(src)) {
 +        fatal_error("memcpy read overflow");
 +    }
-+    if (len > malloc_object_size(dst)) {
++    if (len > malloc_object_size_fast(dst)) {
 +        fatal_error("memcpy buffer overflow");
 +    }
 +
@@ -160,10 +175,10 @@ index 6221d0b..017a250 100644
 +}
 +
 +EXPORT void *h_memmove(void *dst, const void *src, size_t len) {
-+    if (len > malloc_object_size(src)) {
++    if (len > malloc_object_size_fast(src)) {
 +        fatal_error("memmove read overflow");
 +    }
-+    if (len > malloc_object_size(dst)) {
++    if (len > malloc_object_size_fast(dst)) {
 +        fatal_error("memmove buffer overflow");
 +    }
 +
@@ -181,7 +196,7 @@ index 6221d0b..017a250 100644
 +}
 +
 +EXPORT void *h_memset(void *dst, int value, size_t len) {
-+    if (len > malloc_object_size(dst)) {
++    if (len > malloc_object_size_fast(dst)) {
 +        fatal_error("memset buffer overflow");
 +    }
 +
@@ -223,3 +238,217 @@ index 0eee395..48a24e1 100644
  
  // POSIX
  int h_posix_memalign(void **memptr, size_t alignment, size_t size);
+diff --git a/test/.gitignore b/test/.gitignore
+index d37a6a7..4dbc64f 100644
+--- a/test/.gitignore
++++ b/test/.gitignore
+@@ -41,4 +41,10 @@ overflow_small_8_byte
+ uninitialized_read_large
+ uninitialized_read_small
+ realloc_init
++memcpy_buffer_overflow
++memcpy_read_overflow
++memcpy_valid
++memmove_buffer_overflow
++memmove_read_overflow
++memmove_valid
+ __pycache__/
+diff --git a/test/Makefile b/test/Makefile
+index 0eb3921..cc3c081 100644
+--- a/test/Makefile
++++ b/test/Makefile
+@@ -67,7 +67,13 @@ EXECUTABLES := \
+     invalid_malloc_object_size_small \
+     invalid_malloc_object_size_small_quarantine \
+     impossibly_large_malloc \
+-    realloc_init
++    realloc_init \
++    memcpy_buffer_overflow \
++    memcpy_read_overflow \
++    memcpy_valid \
++    memmove_buffer_overflow \
++    memmove_read_overflow \
++    memmove_valid
+ 
+ all: $(EXECUTABLES)
+ 
+diff --git a/test/memcpy_buffer_overflow.c b/test/memcpy_buffer_overflow.c
+new file mode 100644
+index 0000000..b8dcc98
+--- /dev/null
++++ b/test/memcpy_buffer_overflow.c
+@@ -0,0 +1,16 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *firstbuffer = malloc(16);
++    char *secondbuffer = malloc(32);
++    if (!firstbuffer && !secondbuffer) {
++        return 1;
++    }
++    memset(secondbuffer, 'a', 16);
++    memcpy(firstbuffer, secondbuffer, 32);
++    return 1;
++}
+diff --git a/test/memcpy_read_overflow.c b/test/memcpy_read_overflow.c
+new file mode 100644
+index 0000000..b34cefb
+--- /dev/null
++++ b/test/memcpy_read_overflow.c
+@@ -0,0 +1,16 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *firstbuffer = malloc(32);
++    char *secondbuffer = malloc(16);
++    if (!firstbuffer && !secondbuffer) {
++        return 1;
++    }
++    memset(secondbuffer, 'a', 16);
++    memcpy(firstbuffer, secondbuffer, 32);
++    return 1;
++}
+diff --git a/test/memcpy_valid.c b/test/memcpy_valid.c
+new file mode 100644
+index 0000000..d42211a
+--- /dev/null
++++ b/test/memcpy_valid.c
+@@ -0,0 +1,16 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *firstbuffer = malloc(16);
++    char *secondbuffer = malloc(16);
++    if (!firstbuffer && !secondbuffer) {
++        return 1;
++    }
++    memset(secondbuffer, 'a', 16);
++    memcpy(firstbuffer, secondbuffer, 16);
++    return 0;
++}
+diff --git a/test/memmove_buffer_overflow.c b/test/memmove_buffer_overflow.c
+new file mode 100644
+index 0000000..95f6d14
+--- /dev/null
++++ b/test/memmove_buffer_overflow.c
+@@ -0,0 +1,16 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *firstbuffer = malloc(16);
++    char *secondbuffer = malloc(32);
++    if (!firstbuffer && !secondbuffer) {
++        return 1;
++    }
++    memset(secondbuffer, 'a', 16);
++    memmove(firstbuffer, secondbuffer, 32);
++    return 1;
++}
+diff --git a/test/memmove_read_overflow.c b/test/memmove_read_overflow.c
+new file mode 100644
+index 0000000..5fa35a8
+--- /dev/null
++++ b/test/memmove_read_overflow.c
+@@ -0,0 +1,16 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *firstbuffer = malloc(32);
++    char *secondbuffer = malloc(16);
++    if (!firstbuffer && !secondbuffer) {
++        return 1;
++    }
++    memset(secondbuffer, 'a', 16);
++    memmove(firstbuffer, secondbuffer, 32);
++    return 1;
++}
+diff --git a/test/memmove_valid.c b/test/memmove_valid.c
+new file mode 100644
+index 0000000..9850407
+--- /dev/null
++++ b/test/memmove_valid.c
+@@ -0,0 +1,16 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *firstbuffer = malloc(16);
++    char *secondbuffer = malloc(16);
++    if (!firstbuffer && !secondbuffer) {
++        return 1;
++    }
++    memset(secondbuffer, 'a', 16);
++    memmove(firstbuffer, secondbuffer, 16);
++    return 0;
++}
+diff --git a/test/test_smc.py b/test/test_smc.py
+index 170278e..b41e085 100644
+--- a/test/test_smc.py
++++ b/test/test_smc.py
+@@ -238,5 +238,43 @@ class TestSimpleMemoryCorruption(unittest.TestCase):
+             "realloc_init")
+         self.assertEqual(returncode, 0)
+ 
++    def test_memcpy_buffer_overflow(self):
++        _stdout, stderr, returncode = self.run_test(
++            "memcpy_buffer_overflow")
++        self.assertEqual(returncode, -6)
++        self.assertEqual(stderr.decode(
++            "utf-8"), "fatal allocator error: memcpy buffer overflow\n")
++
++    def test_memcpy_read_overflow(self):
++        _stdout, stderr, returncode = self.run_test(
++            "memcpy_read_overflow")
++        self.assertEqual(returncode, -6)
++        self.assertEqual(stderr.decode(
++            "utf-8"), "fatal allocator error: memcpy read overflow\n")
++
++    def test_memcpy_valid(self):
++        _stdout, _stderr, returncode = self.run_test(
++            "memcpy_valid")
++        self.assertEqual(returncode, 0)
++
++    def test_memmove_buffer_overflow(self):
++        _stdout, stderr, returncode = self.run_test(
++            "memmove_buffer_overflow")
++        self.assertEqual(returncode, -6)
++        self.assertEqual(stderr.decode(
++            "utf-8"), "fatal allocator error: memmove buffer overflow\n")
++
++    def test_memmove_read_overflow(self):
++        _stdout, stderr, returncode = self.run_test(
++            "memmove_read_overflow")
++        self.assertEqual(returncode, -6)
++        self.assertEqual(stderr.decode(
++            "utf-8"), "fatal allocator error: memmove read overflow\n")
++
++    def test_memmove_valid(self):
++        _stdout, _stderr, returncode = self.run_test(
++            "memmove_valid")
++        self.assertEqual(returncode, 0)
++
+ if __name__ == '__main__':
+     unittest.main()
