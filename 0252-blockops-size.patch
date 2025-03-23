@@ -11,30 +11,40 @@ Subject: [PATCH] perform size checks on memcpy/memmove/memset
 
 Signed-off-by: Tavi <tavi@divested.dev>
 ---
- Android.bp                     |  1 +
- CREDITS                        |  6 +++
- Makefile                       |  7 +++-
- README.md                      |  4 ++
- config/default.mk              |  1 +
- config/light.mk                |  1 +
- h_malloc.c                     | 74 ++++++++++++++++++++++++++++++++++
- include/h_malloc.h             | 13 ++++++
- test/.gitignore                |  6 +++
- test/Makefile                  |  8 +++-
- test/memcpy_buffer_overflow.c  | 16 ++++++++
- test/memcpy_read_overflow.c    | 16 ++++++++
- test/memcpy_valid.c            | 16 ++++++++
- test/memmove_buffer_overflow.c | 16 ++++++++
- test/memmove_read_overflow.c   | 16 ++++++++
- test/memmove_valid.c           | 16 ++++++++
- test/test_smc.py               | 38 +++++++++++++++++
- 17 files changed, 253 insertions(+), 2 deletions(-)
+ Android.bp                      |   1 +
+ CREDITS                         |   6 ++
+ Makefile                        |   7 ++-
+ README.md                       |   4 ++
+ config/default.mk               |   1 +
+ config/light.mk                 |   1 +
+ h_malloc.c                      | 100 ++++++++++++++++++++++++++++++--
+ include/h_malloc.h              |  13 +++++
+ test/.gitignore                 |  11 ++++
+ test/Makefile                   |  13 ++++-
+ test/memcpy_buffer_overflow.c   |  15 +++++
+ test/memcpy_read_overflow.c     |  15 +++++
+ test/memcpy_valid_mismatched.c  |  15 +++++
+ test/memcpy_valid_same.c        |  15 +++++
+ test/memmove_buffer_overflow.c  |  15 +++++
+ test/memmove_read_overflow.c    |  15 +++++
+ test/memmove_valid_mismatched.c |  15 +++++
+ test/memmove_valid_same.c       |  15 +++++
+ test/memset_buffer_overflow.c   |  13 +++++
+ test/memset_valid_mismatched.c  |  13 +++++
+ test/memset_valid_same.c        |  13 +++++
+ test/test_smc.py                |  65 +++++++++++++++++++++
+ 22 files changed, 373 insertions(+), 8 deletions(-)
  create mode 100644 test/memcpy_buffer_overflow.c
  create mode 100644 test/memcpy_read_overflow.c
- create mode 100644 test/memcpy_valid.c
+ create mode 100644 test/memcpy_valid_mismatched.c
+ create mode 100644 test/memcpy_valid_same.c
  create mode 100644 test/memmove_buffer_overflow.c
  create mode 100644 test/memmove_read_overflow.c
- create mode 100644 test/memmove_valid.c
+ create mode 100644 test/memmove_valid_mismatched.c
+ create mode 100644 test/memmove_valid_same.c
+ create mode 100644 test/memset_buffer_overflow.c
+ create mode 100644 test/memset_valid_mismatched.c
+ create mode 100644 test/memset_valid_same.c
 
 diff --git a/Android.bp b/Android.bp
 index f6a7a9c..a2bab52 100644
@@ -124,15 +134,69 @@ index 88a0e1f..7edd423 100644
  CONFIG_SELF_INIT := true
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index 6221d0b..f2f6d2a 100644
+index 6221d0b..3950722 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
-@@ -1874,6 +1874,80 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
+@@ -528,7 +528,7 @@ static void set_canary(UNUSED const struct slab_metadata *metadata, UNUSED void
+     }
+ #endif
+ 
+-    memcpy((char *)p + size - canary_size, &metadata->canary_value, canary_size);
++    h_memcpy_real((char *)p + size - canary_size, &metadata->canary_value, canary_size);
+ #endif
+ }
+ 
+@@ -541,7 +541,7 @@ static void check_canary(UNUSED const struct slab_metadata *metadata, UNUSED con
+ #endif
+ 
+     u64 canary_value;
+-    memcpy(&canary_value, (const char *)p + size - canary_size, canary_size);
++    h_memcpy_real(&canary_value, (const char *)p + size - canary_size, canary_size);
+ 
+ #ifdef HAS_ARM_MTE
+     if (unlikely(canary_value == 0)) {
+@@ -831,7 +831,7 @@ static inline void deallocate_small(void *p, const size_t *expected_size) {
+ #endif
+ 
+         if (ZERO_ON_FREE && !skip_zero) {
+-            memset(p, 0, size - canary_size);
++            h_memset_real(p, 0, size - canary_size);
+         }
+     }
+ 
+@@ -1502,7 +1502,7 @@ EXPORT void *h_calloc(size_t nmemb, size_t size) {
+     total_size = adjust_size_for_canary(total_size);
+     void *p = alloc(total_size);
+     if (!ZERO_ON_FREE && likely(p != NULL) && total_size && total_size <= max_slab_size_class) {
+-        memset(p, 0, total_size - canary_size);
++        h_memset_real(p, 0, total_size - canary_size);
+     }
+ #ifdef HAS_ARM_MTE
+     // use an assert instead of adding a conditional to memset() above (freed memory is always
+@@ -1624,7 +1624,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
+                 mutex_unlock(&ra->lock);
+ 
+                 if (memory_remap_fixed(old, old_size, new, size)) {
+-                    memcpy(new, old, copy_size);
++                    h_memcpy_real(new, old, copy_size);
+                     deallocate_pages(old, old_size, old_guard_size);
+                 } else {
+                     memory_unmap((char *)old - old_guard_size, old_guard_size);
+@@ -1646,7 +1646,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
+     if (copy_size > 0 && copy_size <= max_slab_size_class) {
+         copy_size -= canary_size;
+     }
+-    memcpy(new, old_orig, copy_size);
++    h_memcpy_real(new, old_orig, copy_size);
+     if (old_size <= max_slab_size_class) {
+         deallocate_small(old, NULL);
+     } else {
+@@ -1874,6 +1874,94 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
      return SIZE_MAX;
  }
  
++inline void *h_memcpy_real(void *dst, const void *src, size_t len) {
 +#if CONFIG_BLOCK_OPS_CHECK_SIZE
-+void *h_memcpy_real(void *dst, const void *src, size_t len) {
 +    char *p_dst = (char *)dst;
 +    char const *p_src = (char const *)src;
 +
@@ -141,26 +205,15 @@ index 6221d0b..f2f6d2a 100644
 +    }
 +
 +    return dst;
++#else
++    return memcpy(dst, src, len);
++#endif
 +}
 +
-+EXPORT void *h_memcpy(void *dst, const void *src, size_t len) {
-+    if (len > malloc_object_size_fast(src)) {
-+        fatal_error("memcpy read overflow");
-+    }
-+    if (len > malloc_object_size_fast(dst)) {
-+        fatal_error("memcpy buffer overflow");
-+    }
-+
-+    return h_memcpy_real(dst, src, len);
-+}
-+
-+void *h_memmove_real(void *dst, const void *src, size_t len) {
++inline void *h_memmove_real(void *dst, const void *src, size_t len) {
++#if CONFIG_BLOCK_OPS_CHECK_SIZE
 +    char *p_dst = (char *)dst;
 +    char const *p_src = (char const *)src;
-+
-+    if(dst == src) {
-+        return dst;
-+    }
 +
 +    if(p_src < p_dst) {
 +        p_dst += len;
@@ -169,24 +222,17 @@ index 6221d0b..f2f6d2a 100644
 +            *--p_dst = *--p_src;
 +        }
 +    } else {
-+        dst = h_memcpy(dst, src, len);
++        dst = h_memcpy_real(dst, src, len);
 +    }
 +
 +    return dst;
++#else
++    return memmove(dst, src, len);
++#endif
 +}
 +
-+EXPORT void *h_memmove(void *dst, const void *src, size_t len) {
-+    if (len > malloc_object_size_fast(src)) {
-+        fatal_error("memmove read overflow");
-+    }
-+    if (len > malloc_object_size_fast(dst)) {
-+        fatal_error("memmove buffer overflow");
-+    }
-+
-+    return h_memmove_real(dst, src, len);
-+}
-+
-+void *h_memset_real(void *dst, int value, size_t len) {
++inline void *h_memset_real(void *dst, int value, size_t len) {
++#if CONFIG_BLOCK_OPS_CHECK_SIZE
 +    char *p_dst = (char *)dst;
 +
 +    while(len--) {
@@ -194,13 +240,45 @@ index 6221d0b..f2f6d2a 100644
 +    }
 +
 +    return dst;
++#else
++    return memset(dst, value, len);
++#endif
++}
++
++#if CONFIG_BLOCK_OPS_CHECK_SIZE
++EXPORT void *h_memcpy(void *dst, const void *src, size_t len) {
++    if(dst == src || len == 0) {
++        return dst;
++    }
++    if (len > malloc_object_size_fast(src)) {
++        fatal_error("memcpy read overflow");
++    }
++    if (len > malloc_object_size_fast(dst)) {
++        fatal_error("memcpy buffer overflow");
++    }
++    return h_memcpy_real(dst, src, len);
++}
++
++EXPORT void *h_memmove(void *dst, const void *src, size_t len) {
++    if(dst == src || len == 0) {
++        return dst;
++    }
++    if (len > malloc_object_size_fast(src)) {
++        fatal_error("memmove read overflow");
++    }
++    if (len > malloc_object_size_fast(dst)) {
++        fatal_error("memmove buffer overflow");
++    }
++    return h_memmove_real(dst, src, len);
 +}
 +
 +EXPORT void *h_memset(void *dst, int value, size_t len) {
++    if(len == 0) {
++        return dst;
++    }
 +    if (len > malloc_object_size_fast(dst)) {
 +        fatal_error("memset buffer overflow");
 +    }
-+
 +    return h_memset_real(dst, value, len);
 +}
 +#endif
@@ -209,7 +287,7 @@ index 6221d0b..f2f6d2a 100644
  #ifdef __ANDROID__
      if (param == M_PURGE) {
 diff --git a/include/h_malloc.h b/include/h_malloc.h
-index 0eee395..48a24e1 100644
+index 0eee395..e907c88 100644
 --- a/include/h_malloc.h
 +++ b/include/h_malloc.h
 @@ -15,6 +15,11 @@ extern "C" {
@@ -228,37 +306,42 @@ index 0eee395..48a24e1 100644
  __attribute__((malloc)) __attribute__((alloc_size(2))) __attribute__((alloc_align(1)))
  void *h_aligned_alloc(size_t alignment, size_t size);
  void h_free(void *ptr);
-+#if CONFIG_BLOCK_OPS_CHECK_SIZE
 +void *h_memcpy_real(void *dst, const void *src, size_t len);
-+void *h_memcpy(void *dst, const void *src, size_t len);
 +void *h_memmove_real(void *dst, const void *src, size_t len);
-+void *h_memmove(void *dst, const void *src, size_t len);
 +void *h_memset_real(void *dst, int value, size_t len);
++#if CONFIG_BLOCK_OPS_CHECK_SIZE
++void *h_memcpy(void *dst, const void *src, size_t len);
++void *h_memmove(void *dst, const void *src, size_t len);
 +void *h_memset(void *dst, int value, size_t len);
 +#endif
  
  // POSIX
  int h_posix_memalign(void **memptr, size_t alignment, size_t size);
 diff --git a/test/.gitignore b/test/.gitignore
-index d37a6a7..4dbc64f 100644
+index d37a6a7..fa4fa1e 100644
 --- a/test/.gitignore
 +++ b/test/.gitignore
-@@ -41,4 +41,10 @@ overflow_small_8_byte
+@@ -41,4 +41,15 @@ overflow_small_8_byte
  uninitialized_read_large
  uninitialized_read_small
  realloc_init
 +memcpy_buffer_overflow
 +memcpy_read_overflow
-+memcpy_valid
++memcpy_valid_same
++memcpy_valid_mismatched
 +memmove_buffer_overflow
 +memmove_read_overflow
-+memmove_valid
++memmove_valid_same
++memmove_valid_mismatched
++memset_buffer_overflow
++memset_valid_same
++memset_valid_mismatched
  __pycache__/
 diff --git a/test/Makefile b/test/Makefile
-index 0eb3921..cc3c081 100644
+index 0eb3921..cd9e664 100644
 --- a/test/Makefile
 +++ b/test/Makefile
-@@ -67,7 +67,13 @@ EXECUTABLES := \
+@@ -67,7 +67,18 @@ EXECUTABLES := \
      invalid_malloc_object_size_small \
      invalid_malloc_object_size_small_quarantine \
      impossibly_large_malloc \
@@ -266,20 +349,24 @@ index 0eb3921..cc3c081 100644
 +    realloc_init \
 +    memcpy_buffer_overflow \
 +    memcpy_read_overflow \
-+    memcpy_valid \
++    memcpy_valid_same \
++    memcpy_valid_mismatched \
 +    memmove_buffer_overflow \
 +    memmove_read_overflow \
-+    memmove_valid
++    memmove_valid_same \
++    memmove_valid_mismatched \
++    memset_buffer_overflow \
++    memset_valid_same \
++    memset_valid_mismatched
  
  all: $(EXECUTABLES)
  
 diff --git a/test/memcpy_buffer_overflow.c b/test/memcpy_buffer_overflow.c
 new file mode 100644
-index 0000000..b8dcc98
+index 0000000..fd0c065
 --- /dev/null
 +++ b/test/memcpy_buffer_overflow.c
-@@ -0,0 +1,16 @@
-+#include <stdio.h>
+@@ -0,0 +1,15 @@
 +#include <stdlib.h>
 +#include <string.h>
 +
@@ -297,11 +384,10 @@ index 0000000..b8dcc98
 +}
 diff --git a/test/memcpy_read_overflow.c b/test/memcpy_read_overflow.c
 new file mode 100644
-index 0000000..b34cefb
+index 0000000..cf51498
 --- /dev/null
 +++ b/test/memcpy_read_overflow.c
-@@ -0,0 +1,16 @@
-+#include <stdio.h>
+@@ -0,0 +1,15 @@
 +#include <stdlib.h>
 +#include <string.h>
 +
@@ -317,13 +403,33 @@ index 0000000..b34cefb
 +    memcpy(firstbuffer, secondbuffer, 32);
 +    return 1;
 +}
-diff --git a/test/memcpy_valid.c b/test/memcpy_valid.c
+diff --git a/test/memcpy_valid_mismatched.c b/test/memcpy_valid_mismatched.c
 new file mode 100644
-index 0000000..d42211a
+index 0000000..81d718e
 --- /dev/null
-+++ b/test/memcpy_valid.c
-@@ -0,0 +1,16 @@
-+#include <stdio.h>
++++ b/test/memcpy_valid_mismatched.c
+@@ -0,0 +1,15 @@
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *firstbuffer = malloc(32);
++    char *secondbuffer = malloc(16);
++    if (!firstbuffer && !secondbuffer) {
++        return 1;
++    }
++    memset(secondbuffer, 'a', 16);
++    memcpy(firstbuffer, secondbuffer, 16);
++    return 0;
++}
+diff --git a/test/memcpy_valid_same.c b/test/memcpy_valid_same.c
+new file mode 100644
+index 0000000..1b408f0
+--- /dev/null
++++ b/test/memcpy_valid_same.c
+@@ -0,0 +1,15 @@
 +#include <stdlib.h>
 +#include <string.h>
 +
@@ -341,11 +447,10 @@ index 0000000..d42211a
 +}
 diff --git a/test/memmove_buffer_overflow.c b/test/memmove_buffer_overflow.c
 new file mode 100644
-index 0000000..95f6d14
+index 0000000..fe192d6
 --- /dev/null
 +++ b/test/memmove_buffer_overflow.c
-@@ -0,0 +1,16 @@
-+#include <stdio.h>
+@@ -0,0 +1,15 @@
 +#include <stdlib.h>
 +#include <string.h>
 +
@@ -363,11 +468,10 @@ index 0000000..95f6d14
 +}
 diff --git a/test/memmove_read_overflow.c b/test/memmove_read_overflow.c
 new file mode 100644
-index 0000000..5fa35a8
+index 0000000..73e4509
 --- /dev/null
 +++ b/test/memmove_read_overflow.c
-@@ -0,0 +1,16 @@
-+#include <stdio.h>
+@@ -0,0 +1,15 @@
 +#include <stdlib.h>
 +#include <string.h>
 +
@@ -383,13 +487,33 @@ index 0000000..5fa35a8
 +    memmove(firstbuffer, secondbuffer, 32);
 +    return 1;
 +}
-diff --git a/test/memmove_valid.c b/test/memmove_valid.c
+diff --git a/test/memmove_valid_mismatched.c b/test/memmove_valid_mismatched.c
 new file mode 100644
-index 0000000..9850407
+index 0000000..5dd1bde
 --- /dev/null
-+++ b/test/memmove_valid.c
-@@ -0,0 +1,16 @@
-+#include <stdio.h>
++++ b/test/memmove_valid_mismatched.c
+@@ -0,0 +1,15 @@
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *firstbuffer = malloc(32);
++    char *secondbuffer = malloc(16);
++    if (!firstbuffer && !secondbuffer) {
++        return 1;
++    }
++    memset(secondbuffer, 'a', 16);
++    memmove(firstbuffer, secondbuffer, 16);
++    return 0;
++}
+diff --git a/test/memmove_valid_same.c b/test/memmove_valid_same.c
+new file mode 100644
+index 0000000..2593abc
+--- /dev/null
++++ b/test/memmove_valid_same.c
+@@ -0,0 +1,15 @@
 +#include <stdlib.h>
 +#include <string.h>
 +
@@ -405,11 +529,68 @@ index 0000000..9850407
 +    memmove(firstbuffer, secondbuffer, 16);
 +    return 0;
 +}
+diff --git a/test/memset_buffer_overflow.c b/test/memset_buffer_overflow.c
+new file mode 100644
+index 0000000..8f9e989
+--- /dev/null
++++ b/test/memset_buffer_overflow.c
+@@ -0,0 +1,13 @@
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *buffer = malloc(16);
++    if (!buffer) {
++        return 1;
++    }
++    memset(buffer, 'a', 32);
++    return 1;
++}
+diff --git a/test/memset_valid_mismatched.c b/test/memset_valid_mismatched.c
+new file mode 100644
+index 0000000..f57fef6
+--- /dev/null
++++ b/test/memset_valid_mismatched.c
+@@ -0,0 +1,13 @@
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *buffer = malloc(32);
++    if (!buffer) {
++        return 1;
++    }
++    memset(buffer, 'a', 16);
++    return 0;
++}
+diff --git a/test/memset_valid_same.c b/test/memset_valid_same.c
+new file mode 100644
+index 0000000..824c18f
+--- /dev/null
++++ b/test/memset_valid_same.c
+@@ -0,0 +1,13 @@
++#include <stdlib.h>
++#include <string.h>
++
++#include "test_util.h"
++
++OPTNONE int main(void) {
++    char *buffer = malloc(16);
++    if (!buffer) {
++        return 1;
++    }
++    memset(buffer, 'a', 16);
++    return 0;
++}
 diff --git a/test/test_smc.py b/test/test_smc.py
-index 170278e..988e9ca 100644
+index 170278e..88bb4e3 100644
 --- a/test/test_smc.py
 +++ b/test/test_smc.py
-@@ -238,5 +238,43 @@ class TestSimpleMemoryCorruption(unittest.TestCase):
+@@ -238,5 +238,70 @@ class TestSimpleMemoryCorruption(unittest.TestCase):
              "realloc_init")
          self.assertEqual(returncode, 0)
  
@@ -427,9 +608,14 @@ index 170278e..988e9ca 100644
 +    #    self.assertEqual(stderr.decode(
 +    #        "utf-8"), "fatal allocator error: memcpy read overflow\n")
 +
-+    def test_memcpy_valid(self):
++    def test_memcpy_valid_same(self):
 +        _stdout, _stderr, returncode = self.run_test(
-+            "memcpy_valid")
++            "memcpy_valid_same")
++        self.assertEqual(returncode, 0)
++
++    def test_memcpy_valid_mismatched(self):
++        _stdout, _stderr, returncode = self.run_test(
++            "memcpy_valid_mismatched")
 +        self.assertEqual(returncode, 0)
 +
 +    #def test_memmove_buffer_overflow(self):
@@ -446,9 +632,31 @@ index 170278e..988e9ca 100644
 +    #    self.assertEqual(stderr.decode(
 +    #        "utf-8"), "fatal allocator error: memmove read overflow\n")
 +
-+    def test_memmove_valid(self):
++    def test_memmove_valid_same(self):
 +        _stdout, _stderr, returncode = self.run_test(
-+            "memmove_valid")
++            "memmove_valid_same")
++        self.assertEqual(returncode, 0)
++
++    def test_memmove_valid_mismatched(self):
++        _stdout, _stderr, returncode = self.run_test(
++            "memmove_valid_mismatched")
++        self.assertEqual(returncode, 0)
++
++    #def test_memset_buffer_overflow(self):
++    #    _stdout, stderr, returncode = self.run_test(
++    #        "memset_buffer_overflow")
++    #    self.assertEqual(returncode, -6)
++    #    self.assertEqual(stderr.decode(
++    #        "utf-8"), "fatal allocator error: memset buffer overflow\n")
++
++    def test_memset_valid_same(self):
++        _stdout, _stderr, returncode = self.run_test(
++            "memset_valid_same")
++        self.assertEqual(returncode, 0)
++
++    def test_memset_valid_mismatched(self):
++        _stdout, _stderr, returncode = self.run_test(
++            "memset_valid_mismatched")
 +        self.assertEqual(returncode, 0)
 +
  if __name__ == '__main__':
