@@ -3,36 +3,33 @@ From: Tavi <tavi@divested.dev>
 Date: Sat, 22 Mar 2025 02:54:10 -0400
 Subject: [PATCH] perform size checks on memcpy/memmove/memset
 
-- memset is disabled for now as it causes hangs
-- underlying functions were copied from isoalloc, licensed Apache-2.0
-	- credit Chris Rohlf for memcpy/memset
-	- credit David Carlier for memmove
+- underlying functions were copied from musl, licensed MIT
 
 Signed-off-by: Tavi <tavi@divested.dev>
 ---
  Android.bp                      |   1 +
- CREDITS                         |   6 ++
- Makefile                        |   7 ++-
- README.md                       |   4 ++
+ CREDITS                         |  24 +++++
+ Makefile                        |   7 +-
+ README.md                       |   3 +
  config/default.mk               |   1 +
  config/light.mk                 |   1 +
- h_malloc.c                      | 100 ++++++++++++++++++++++++++++++--
- include/h_malloc.h              |  13 +++++
- test/.gitignore                 |  11 ++++
- test/Makefile                   |  13 ++++-
- test/memcpy_buffer_overflow.c   |  15 +++++
- test/memcpy_read_overflow.c     |  15 +++++
- test/memcpy_valid_mismatched.c  |  15 +++++
- test/memcpy_valid_same.c        |  15 +++++
- test/memmove_buffer_overflow.c  |  15 +++++
- test/memmove_read_overflow.c    |  15 +++++
- test/memmove_valid_mismatched.c |  15 +++++
- test/memmove_valid_same.c       |  15 +++++
- test/memset_buffer_overflow.c   |  13 +++++
- test/memset_valid_mismatched.c  |  13 +++++
- test/memset_valid_same.c        |  13 +++++
- test/test_smc.py                |  65 +++++++++++++++++++++
- 22 files changed, 373 insertions(+), 8 deletions(-)
+ h_malloc.c                      | 150 ++++++++++++++++++++++++++++++--
+ include/h_malloc.h              |  34 ++++++++
+ test/.gitignore                 |  11 +++
+ test/Makefile                   |  13 ++-
+ test/memcpy_buffer_overflow.c   |  15 ++++
+ test/memcpy_read_overflow.c     |  15 ++++
+ test/memcpy_valid_mismatched.c  |  15 ++++
+ test/memcpy_valid_same.c        |  15 ++++
+ test/memmove_buffer_overflow.c  |  15 ++++
+ test/memmove_read_overflow.c    |  15 ++++
+ test/memmove_valid_mismatched.c |  15 ++++
+ test/memmove_valid_same.c       |  15 ++++
+ test/memset_buffer_overflow.c   |  13 +++
+ test/memset_valid_mismatched.c  |  13 +++
+ test/memset_valid_same.c        |  13 +++
+ test/test_smc.py                |  65 ++++++++++++++
+ 22 files changed, 461 insertions(+), 8 deletions(-)
  create mode 100644 test/memcpy_buffer_overflow.c
  create mode 100644 test/memcpy_read_overflow.c
  create mode 100644 test/memcpy_valid_mismatched.c
@@ -58,18 +55,36 @@ index f6a7a9c..a2bab52 100644
  
  cc_defaults {
 diff --git a/CREDITS b/CREDITS
-index 31b6875..1832cc5 100644
+index 31b6875..b15bc72 100644
 --- a/CREDITS
 +++ b/CREDITS
-@@ -23,6 +23,12 @@ h_malloc.c open-addressed hash table (regions_grow, regions_insert, regions_find
+@@ -23,6 +23,30 @@ h_malloc.c open-addressed hash table (regions_grow, regions_insert, regions_find
      ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
      OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  
-+h_malloc.c block operations (h_memcpy_real, h_memmove_real, h_memset_real):
++*_musl functions extracted from musl and macros removed:
++    Copyright © 2005-2020 Rich Felker, et al.
 +
-+    Copyright (C) 2022, 2023 struct <chris.rohlf@gmail.com>
-+    Copyright (C) 2023 David Carlier <devnexen@gmail.com>
-+    Apache-2.0
++    Permission is hereby granted, free of charge, to any person obtaining
++    a copy of this software and associated documentation files (the
++    "Software"), to deal in the Software without restriction, including
++    without limitation the rights to use, copy, modify, merge, publish,
++    distribute, sublicense, and/or sell copies of the Software, and to
++    permit persons to whom the Software is furnished to do so, subject to
++    the following conditions:
++
++    The above copyright notice and this permission notice shall be
++    included in all copies or substantial portions of the Software.
++
++    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
++    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
++    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
++    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
++    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
++
++    Contributor list: https://git.musl-libc.org/cgit/musl/tree/COPYRIGHT
 +
  libdivide:
  
@@ -100,17 +115,16 @@ index f33f88e..37d35f7 100644
  $(OUT)/libhardened_malloc$(SUFFIX).so: $(OBJECTS) | $(OUT)
  	$(CC) $(CFLAGS) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
 diff --git a/README.md b/README.md
-index 6a1a91b..0f96544 100644
+index 6a1a91b..972b6dd 100644
 --- a/README.md
 +++ b/README.md
-@@ -276,6 +276,10 @@ The following boolean configuration options are available:
+@@ -276,6 +276,9 @@ The following boolean configuration options are available:
    hardware, which may become drastically lower in the future. Whether or not
    this feature is enabled, the metadata is all contained within an isolated
    memory region with high entropy random guard regions around it.
 +* `CONFIG_BLOCK_OPS_CHECK_SIZE`: `true` or `false` (default) to ensure length
-+  parameter of the memcpy/memmove/memset block operations are within
-+  approximate bounds to minimize buffer overflows. Note, memset override is
-+  currently disabled due to improper behavior.
++  parameter of the memcpy/memmove/memset block operations and their wide
++  variants are within approximate bounds to minimize buffer overflows.
  
  The following integer configuration options are available:
  
@@ -133,7 +147,7 @@ index 88a0e1f..7edd423 100644
  CONFIG_SELF_INIT := true
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index 6221d0b..8c774e7 100644
+index 6221d0b..097fe26 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -528,7 +528,7 @@ static void set_canary(UNUSED const struct slab_metadata *metadata, UNUSED void
@@ -141,7 +155,7 @@ index 6221d0b..8c774e7 100644
  #endif
  
 -    memcpy((char *)p + size - canary_size, &metadata->canary_value, canary_size);
-+    h_memcpy_real((char *)p + size - canary_size, &metadata->canary_value, canary_size);
++    h_memcpy_internal((char *)p + size - canary_size, &metadata->canary_value, canary_size);
  #endif
  }
  
@@ -150,7 +164,7 @@ index 6221d0b..8c774e7 100644
  
      u64 canary_value;
 -    memcpy(&canary_value, (const char *)p + size - canary_size, canary_size);
-+    h_memcpy_real(&canary_value, (const char *)p + size - canary_size, canary_size);
++    h_memcpy_internal(&canary_value, (const char *)p + size - canary_size, canary_size);
  
  #ifdef HAS_ARM_MTE
      if (unlikely(canary_value == 0)) {
@@ -159,7 +173,7 @@ index 6221d0b..8c774e7 100644
  
          if (ZERO_ON_FREE && !skip_zero) {
 -            memset(p, 0, size - canary_size);
-+            h_memset_real(p, 0, size - canary_size);
++            h_memset_internal(p, 0, size - canary_size);
          }
      }
  
@@ -168,7 +182,7 @@ index 6221d0b..8c774e7 100644
      void *p = alloc(total_size);
      if (!ZERO_ON_FREE && likely(p != NULL) && total_size && total_size <= max_slab_size_class) {
 -        memset(p, 0, total_size - canary_size);
-+        h_memset_real(p, 0, total_size - canary_size);
++        h_memset_internal(p, 0, total_size - canary_size);
      }
  #ifdef HAS_ARM_MTE
      // use an assert instead of adding a conditional to memset() above (freed memory is always
@@ -177,7 +191,7 @@ index 6221d0b..8c774e7 100644
  
                  if (memory_remap_fixed(old, old_size, new, size)) {
 -                    memcpy(new, old, copy_size);
-+                    h_memcpy_real(new, old, copy_size);
++                    h_memcpy_internal(new, old, copy_size);
                      deallocate_pages(old, old_size, old_guard_size);
                  } else {
                      memory_unmap((char *)old - old_guard_size, old_guard_size);
@@ -186,68 +200,30 @@ index 6221d0b..8c774e7 100644
          copy_size -= canary_size;
      }
 -    memcpy(new, old_orig, copy_size);
-+    h_memcpy_real(new, old_orig, copy_size);
++    h_memcpy_internal(new, old_orig, copy_size);
      if (old_size <= max_slab_size_class) {
          deallocate_small(old, NULL);
      } else {
-@@ -1874,6 +1874,94 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
+@@ -1874,6 +1874,144 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
      return SIZE_MAX;
  }
  
-+inline void *h_memcpy_real(void *dst, const void *src, size_t len) {
-+#if CONFIG_BLOCK_OPS_CHECK_SIZE
-+    char *p_dst = (char *)dst;
-+    char const *p_src = (char const *)src;
++#if CONFIG_BLOCK_OPS_CHECK_SIZE && !defined(HAS_ARM_MTE)
++inline void EXCLUDE_REPLACEMENT *h_memcpy_musl(void *restrict dst, const void *restrict src, size_t len) {
++    unsigned char *d = dst;
++    const unsigned char *s = src;
 +
-+    while(len--) {
-+        *p_dst++ = *p_src++;
-+    }
++    for (; len; len--) *d++ = *s++;
 +
 +    return dst;
-+#else
-+    return memcpy(dst, src, len);
-+#endif
 +}
 +
-+inline void *h_memmove_real(void *dst, const void *src, size_t len) {
-+#if CONFIG_BLOCK_OPS_CHECK_SIZE
-+    char *p_dst = (char *)dst;
-+    char const *p_src = (char const *)src;
-+
-+    if(p_src < p_dst) {
-+        p_dst += len;
-+        p_src += len;
-+        while(len--) {
-+            *--p_dst = *--p_src;
-+        }
-+    } else {
-+        dst = h_memcpy_real(dst, src, len);
-+    }
-+
-+    return dst;
-+#else
-+    return memmove(dst, src, len);
-+#endif
-+}
-+
-+inline void *h_memset_real(void *dst, int value, size_t len) {
-+#if CONFIG_BLOCK_OPS_CHECK_SIZE
-+    char *p_dst = (char *)dst;
-+
-+    while(len--) {
-+        *p_dst++ = value;
-+    }
-+
-+    return dst;
-+#else
-+    return memset(dst, value, len);
-+#endif
-+}
-+
-+#if CONFIG_BLOCK_OPS_CHECK_SIZE
-+EXPORT void *h_memcpy(void *dst, const void *src, size_t len) {
++EXPORT void *h_memcpy_wrapped(void *restrict dst, const void *restrict src, size_t len) {
 +    if(dst == src || len == 0) {
 +        return dst;
++    }
++    if (dst < src + len && dst + len > src) {
++        fatal_error("memcpy overlap");
 +    }
 +    if (len > malloc_object_size(src)) {
 +        fatal_error("memcpy read overflow");
@@ -255,10 +231,23 @@ index 6221d0b..8c774e7 100644
 +    if (len > malloc_object_size(dst)) {
 +        fatal_error("memcpy buffer overflow");
 +    }
-+    return h_memcpy_real(dst, src, len);
++    return h_memcpy_musl(dst, src, len);
 +}
 +
-+EXPORT void *h_memmove(void *dst, const void *src, size_t len) {
++inline void EXCLUDE_REPLACEMENT *h_memmove_musl(void *dst, const void *src, size_t len) {
++    char *d = dst;
++    const char *s = src;
++
++    if (d < s) {
++        for (; len; len--) *d++ = *s++;
++    } else {
++        while (len) len--, d[len] = s[len];
++    }
++
++    return dst;
++}
++
++EXPORT void *h_memmove_wrapped(void *dst, const void *src, size_t len) {
 +    if(dst == src || len == 0) {
 +        return dst;
 +    }
@@ -268,17 +257,92 @@ index 6221d0b..8c774e7 100644
 +    if (len > malloc_object_size(dst)) {
 +        fatal_error("memmove buffer overflow");
 +    }
-+    return h_memmove_real(dst, src, len);
++    return h_memmove_musl(dst, src, len);
 +}
 +
-+EXPORT void *h_memset(void *dst, int value, size_t len) {
++inline void EXCLUDE_REPLACEMENT *h_memset_musl(void *dst, int value, size_t len) {
++    unsigned char *s = dst;
++
++    for (; len; len--, s++) *s = value;
++
++    return dst;
++}
++
++EXPORT void *h_memset_wrapped(void *dst, int value, size_t len) {
 +    if(len == 0) {
 +        return dst;
 +    }
 +    if (len > malloc_object_size(dst)) {
 +        fatal_error("memset buffer overflow");
 +    }
-+    return h_memset_real(dst, value, len);
++    return h_memset_musl(dst, value, len);
++}
++
++inline wchar_t EXCLUDE_REPLACEMENT *h_wmemcpy_musl(wchar_t *restrict dst, const wchar_t *restrict src, size_t len) {
++    wchar_t *ret = dst;
++
++    while (len--) *dst++ = *src++;
++
++    return ret;
++}
++
++EXPORT wchar_t *h_wmemcpy_wrapped(wchar_t *restrict dst, const wchar_t *restrict src, size_t len) {
++    if(dst == src || len == 0) {
++        return dst;
++    }
++    if (dst < src + len && dst + len > src) {
++        fatal_error("wmemcpy overlap");
++    }
++    if (len > malloc_object_size(src)) {
++        fatal_error("wmemcpy read overflow");
++    }
++    if (len > malloc_object_size(dst)) {
++        fatal_error("wmemcpy buffer overflow");
++    }
++    return h_wmemcpy_musl(dst, src, len);
++}
++
++inline wchar_t EXCLUDE_REPLACEMENT *h_wmemmove_musl(wchar_t *dst, const wchar_t *src, size_t len) {
++    wchar_t *ret = dst;
++
++    if ((uintptr_t)dst-(uintptr_t)src < len * sizeof *dst) {
++        while (len--) dst[len] = src[len];
++    } else {
++	while (len--) *dst++ = *src++;
++    }
++
++    return ret;
++}
++
++EXPORT wchar_t *h_wmemmove_wrapped(wchar_t *dst, const wchar_t *src, size_t len) {
++    if(dst == src || len == 0) {
++        return dst;
++    }
++    if (len > malloc_object_size(src)) {
++        fatal_error("wmemmove read overflow");
++    }
++    if (len > malloc_object_size(dst)) {
++        fatal_error("wmemmove buffer overflow");
++    }
++    return h_wmemmove_musl(dst, src, len);
++}
++
++inline wchar_t EXCLUDE_REPLACEMENT *h_wmemset_musl(wchar_t *dst, wchar_t value, size_t len) {
++    wchar_t *ret = dst;
++
++    while (len--) *dst++ = value;
++
++    return ret;
++}
++
++EXPORT wchar_t *h_wmemset_wrapped(wchar_t *dst, wchar_t value, size_t len) {
++    if(len == 0) {
++        return dst;
++    }
++    if (len > malloc_object_size(dst)) {
++        fatal_error("wmemset buffer overflow");
++    }
++    return h_wmemset_musl(dst, value, len);
 +}
 +#endif
 +
@@ -286,32 +350,53 @@ index 6221d0b..8c774e7 100644
  #ifdef __ANDROID__
      if (param == M_PURGE) {
 diff --git a/include/h_malloc.h b/include/h_malloc.h
-index 0eee395..e907c88 100644
+index 0eee395..45a5c6b 100644
 --- a/include/h_malloc.h
 +++ b/include/h_malloc.h
-@@ -15,6 +15,11 @@ extern "C" {
+@@ -15,6 +15,14 @@ extern "C" {
  #define h_realloc realloc
  #define h_aligned_alloc aligned_alloc
  #define h_free free
-+#if CONFIG_BLOCK_OPS_CHECK_SIZE
-+#define h_memcpy memcpy
-+#define h_memmove memmove
-+//#define h_memset memset
++#if CONFIG_BLOCK_OPS_CHECK_SIZE && !defined(HAS_ARM_MTE)
++#define h_memcpy_wrapped memcpy
++#define h_memmove_wrapped memmove
++#define h_memset_wrapped memset
++#define h_wmemcpy_wrapped wmemcpy
++#define h_wmemmove_wrapped wmemmove
++#define h_wmemset_wrapped wmemset
 +#endif
  
  #define h_posix_memalign posix_memalign
  
-@@ -54,6 +59,14 @@ __attribute__((alloc_size(2))) void *h_realloc(void *ptr, size_t size);
+@@ -54,6 +62,32 @@ __attribute__((alloc_size(2))) void *h_realloc(void *ptr, size_t size);
  __attribute__((malloc)) __attribute__((alloc_size(2))) __attribute__((alloc_align(1)))
  void *h_aligned_alloc(size_t alignment, size_t size);
  void h_free(void *ptr);
-+void *h_memcpy_real(void *dst, const void *src, size_t len);
-+void *h_memmove_real(void *dst, const void *src, size_t len);
-+void *h_memset_real(void *dst, int value, size_t len);
-+#if CONFIG_BLOCK_OPS_CHECK_SIZE
-+void *h_memcpy(void *dst, const void *src, size_t len);
-+void *h_memmove(void *dst, const void *src, size_t len);
-+void *h_memset(void *dst, int value, size_t len);
++#if CONFIG_BLOCK_OPS_CHECK_SIZE && !defined(HAS_ARM_MTE)
++#if defined(__clang__)
++#define EXCLUDE_REPLACEMENT __attribute__((optnone))
++#elif defined(__GNUC__) || defined(__GNUG__)
++#define EXCLUDE_REPLACEMENT __attribute__((__optimize__("-fno-tree-loop-distribute-patterns")))
++#endif
++void *h_memcpy_musl(void *dst, const void *src, size_t len);
++void *h_memcpy_wrapped(void *dst, const void *src, size_t len);
++void *h_memmove_musl(void *dst, const void *src, size_t len);
++void *h_memmove_wrapped(void *dst, const void *src, size_t len);
++void *h_memset_musl(void *dst, int value, size_t len);
++void *h_memset_wrapped(void *dst, int value, size_t len);
++wchar_t *h_wmemcpy_musl(wchar_t *dst, const wchar_t *src, size_t len);
++wchar_t *h_wmemcpy_wrapped(wchar_t *dst, const wchar_t *src, size_t len);
++wchar_t *h_wmemmove_musl(wchar_t *dst, const wchar_t *src, size_t len);
++wchar_t *h_wmemmove_wrapped(wchar_t *dst, const wchar_t *src, size_t len);
++wchar_t *h_wmemset_musl(wchar_t *dst, wchar_t value, size_t len);
++wchar_t *h_wmemset_wrapped(wchar_t *dst, wchar_t value, size_t len);
++#define h_memcpy_internal h_memcpy_musl
++#define h_memove_internal h_memmove_musl
++#define h_memset_internal h_memset_musl
++#else
++#define h_memcpy_internal __builtin_memcpy
++#define h_memove_internal __builtin_memmove
++#define h_memset_internal __builtin_memset
 +#endif
  
  // POSIX
