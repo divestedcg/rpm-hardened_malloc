@@ -43,12 +43,12 @@ index 3950722..24ecf52 100644
      if(dst == src || len == 0) {
          return dst;
      }
--    if (len > malloc_object_size_fast(src)) {
-+    if (len > malloc_object_size_fast(src) && ro.are_block_operation_size_checks_enabled) {
+-    if (len > malloc_object_size(src)) {
++    if (len > malloc_object_size(src) && ro.are_block_operation_size_checks_enabled) {
          fatal_error("memcpy read overflow");
      }
--    if (len > malloc_object_size_fast(dst)) {
-+    if (len > malloc_object_size_fast(dst) && ro.are_block_operation_size_checks_enabled) {
+-    if (len > malloc_object_size(dst)) {
++    if (len > malloc_object_size(dst) && ro.are_block_operation_size_checks_enabled) {
          fatal_error("memcpy buffer overflow");
      }
      return h_memcpy_real(dst, src, len);
@@ -56,12 +56,12 @@ index 3950722..24ecf52 100644
      if(dst == src || len == 0) {
          return dst;
      }
--    if (len > malloc_object_size_fast(src)) {
-+    if (len > malloc_object_size_fast(src) && ro.are_block_operation_size_checks_enabled) {
+-    if (len > malloc_object_size(src)) {
++    if (len > malloc_object_size(src) && ro.are_block_operation_size_checks_enabled) {
          fatal_error("memmove read overflow");
      }
--    if (len > malloc_object_size_fast(dst)) {
-+    if (len > malloc_object_size_fast(dst) && ro.are_block_operation_size_checks_enabled) {
+-    if (len > malloc_object_size(dst)) {
++    if (len > malloc_object_size(dst) && ro.are_block_operation_size_checks_enabled) {
          fatal_error("memmove buffer overflow");
      }
      return h_memmove_real(dst, src, len);
@@ -69,8 +69,8 @@ index 3950722..24ecf52 100644
      if(len == 0) {
          return dst;
      }
--    if (len > malloc_object_size_fast(dst)) {
-+    if (len > malloc_object_size_fast(dst) && ro.are_block_operation_size_checks_enabled) {
+-    if (len > malloc_object_size(dst)) {
++    if (len > malloc_object_size(dst) && ro.are_block_operation_size_checks_enabled) {
          fatal_error("memset buffer overflow");
      }
      return h_memset_real(dst, value, len);

@@ -7,7 +7,6 @@ Subject: [PATCH] perform size checks on memcpy/memmove/memset
 - underlying functions were copied from isoalloc, licensed Apache-2.0
 	- credit Chris Rohlf for memcpy/memset
 	- credit David Carlier for memmove
-- use the fast path as some programs crash otherwise
 
 Signed-off-by: Tavi <tavi@divested.dev>
 ---
@@ -134,7 +133,7 @@ index 88a0e1f..7edd423 100644
  CONFIG_SELF_INIT := true
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index 6221d0b..3950722 100644
+index 6221d0b..8c774e7 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -528,7 +528,7 @@ static void set_canary(UNUSED const struct slab_metadata *metadata, UNUSED void
@@ -250,10 +249,10 @@ index 6221d0b..3950722 100644
 +    if(dst == src || len == 0) {
 +        return dst;
 +    }
-+    if (len > malloc_object_size_fast(src)) {
++    if (len > malloc_object_size(src)) {
 +        fatal_error("memcpy read overflow");
 +    }
-+    if (len > malloc_object_size_fast(dst)) {
++    if (len > malloc_object_size(dst)) {
 +        fatal_error("memcpy buffer overflow");
 +    }
 +    return h_memcpy_real(dst, src, len);
@@ -263,10 +262,10 @@ index 6221d0b..3950722 100644
 +    if(dst == src || len == 0) {
 +        return dst;
 +    }
-+    if (len > malloc_object_size_fast(src)) {
++    if (len > malloc_object_size(src)) {
 +        fatal_error("memmove read overflow");
 +    }
-+    if (len > malloc_object_size_fast(dst)) {
++    if (len > malloc_object_size(dst)) {
 +        fatal_error("memmove buffer overflow");
 +    }
 +    return h_memmove_real(dst, src, len);
@@ -276,7 +275,7 @@ index 6221d0b..3950722 100644
 +    if(len == 0) {
 +        return dst;
 +    }
-+    if (len > malloc_object_size_fast(dst)) {
++    if (len > malloc_object_size(dst)) {
 +        fatal_error("memset buffer overflow");
 +    }
 +    return h_memset_real(dst, value, len);
@@ -363,7 +362,7 @@ index 0eb3921..cd9e664 100644
  
 diff --git a/test/memcpy_buffer_overflow.c b/test/memcpy_buffer_overflow.c
 new file mode 100644
-index 0000000..fd0c065
+index 0000000..16cab77
 --- /dev/null
 +++ b/test/memcpy_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -378,7 +377,7 @@ index 0000000..fd0c065
 +    if (!firstbuffer && !secondbuffer) {
 +        return 1;
 +    }
-+    memset(secondbuffer, 'a', 16);
++    memset(secondbuffer, 'a', 32);
 +    memcpy(firstbuffer, secondbuffer, 32);
 +    return 1;
 +}
@@ -447,7 +446,7 @@ index 0000000..1b408f0
 +}
 diff --git a/test/memmove_buffer_overflow.c b/test/memmove_buffer_overflow.c
 new file mode 100644
-index 0000000..fe192d6
+index 0000000..c83bf97
 --- /dev/null
 +++ b/test/memmove_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -462,7 +461,7 @@ index 0000000..fe192d6
 +    if (!firstbuffer && !secondbuffer) {
 +        return 1;
 +    }
-+    memset(secondbuffer, 'a', 16);
++    memset(secondbuffer, 'a', 32);
 +    memmove(firstbuffer, secondbuffer, 32);
 +    return 1;
 +}
