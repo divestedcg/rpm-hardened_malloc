@@ -12,7 +12,7 @@ Co-authored-by: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
  README.md                        |   3 +
  config/default.mk                |   1 +
  config/light.mk                  |   1 +
- h_malloc.c                       |  99 +++++++++++++++++++++--
+ h_malloc.c                       |  98 +++++++++++++++++++++--
  include/h_malloc.h               |  16 ++++
  memcpy.c                         | 132 +++++++++++++++++++++++++++++++
  memmove.c                        |  50 ++++++++++++
@@ -44,7 +44,7 @@ Co-authored-by: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
  test/wmemset_valid_mismatched.c  |  13 +++
  test/wmemset_valid_same.c        |  13 +++
  wmemset.c                        |  12 +++
- 38 files changed, 948 insertions(+), 9 deletions(-)
+ 38 files changed, 947 insertions(+), 9 deletions(-)
  create mode 100644 memcpy.c
  create mode 100644 memmove.c
  create mode 100644 memset.c
@@ -214,7 +214,7 @@ index 88a0e1f..7edd423 100644
  CONFIG_SELF_INIT := true
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index 6221d0b..cabec1d 100644
+index 6221d0b..faf9355 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -20,6 +20,10 @@
@@ -282,7 +282,7 @@ index 6221d0b..cabec1d 100644
      if (old_size <= max_slab_size_class) {
          deallocate_small(old, NULL);
      } else {
-@@ -1874,6 +1878,89 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
+@@ -1874,6 +1878,88 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
      return SIZE_MAX;
  }
  
@@ -291,7 +291,7 @@ index 6221d0b..cabec1d 100644
 +    if (unlikely(dst == src || len == 0)) {
 +        return dst;
 +    }
-+    if (unlikely(dst < src + len && dst + len > src)) {
++    if (unlikely(dst < (src + len) && (dst + len) > src)) {
 +        fatal_error("memcpy overlap");
 +    }
 +    if (unlikely(len > malloc_object_size(src))) {
@@ -330,10 +330,10 @@ index 6221d0b..cabec1d 100644
 +    if (unlikely(dst == src || len == 0)) {
 +        return dst;
 +    }
-+    size_t lenAdj = len * sizeof(wchar_t);
-+    if (unlikely(dst < src + lenAdj && dst + lenAdj > src)) {
++    if (unlikely(dst < (src + len) && (dst + len) > src)) {
 +        fatal_error("wmemcpy overlap");
 +    }
++    size_t lenAdj = len * sizeof(wchar_t);
 +    if (unlikely(lenAdj > malloc_object_size(src))) {
 +        fatal_error("wmemcpy read overflow");
 +    }
@@ -361,8 +361,7 @@ index 6221d0b..cabec1d 100644
 +    if (unlikely(len == 0)) {
 +        return dst;
 +    }
-+    size_t lenAdj = len * sizeof(wchar_t);
-+    if (unlikely(lenAdj > malloc_object_size(dst))) {
++    if (unlikely((len * sizeof(wchar_t)) > malloc_object_size(dst))) {
 +        fatal_error("wmemset buffer overflow");
 +    }
 +    return musl_wmemset(dst, value, len);
