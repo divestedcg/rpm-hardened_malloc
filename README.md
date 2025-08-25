@@ -27,18 +27,21 @@ Modifications
 -------------
 - mseal is used for some allocator data
 	- https://github.com/GrapheneOS/hardened_malloc/pull/242
-- memcpy/memmove/memset are overridden to perform size checks, experimental
-	- https://github.com/GrapheneOS/hardened_malloc/pull/252
 
 Included Variants
 -----------------
-Four variants are included compiled for four different micro-architectures:
+Five variants are included compiled for four different micro-architectures:
 
 - mpk
 	- prioritizes security, passes all tests
 		- protects allocator metadata using Memory Protection Keys
 		- needs processor support: `grep -q " pku " /proc/cpuinfo && echo "Supported" || echo "Not supported"`
 		- incompatible with systemd's default seccomp filter, no easy way to override
+- bocs
+	- prioritizes security, passes all tests
+		- memcpy/memmove/memset are overridden to perform size checks, experimental
+		- has a 2-4x perfomance slowdown on them
+		- https://github.com/GrapheneOS/hardened_malloc/pull/252
 - default
 	- prioritizes security, passes all tests
 - memefficient
@@ -83,6 +86,9 @@ Known Issues
 	- Fedora fixed in libhandy-1.8.2-5.fc39
 	- https://bugzilla.redhat.com/show_bug.cgi?id=2253814
 - liferea <1.15.9 has a write after free issue
+	- https://gitlab.gnome.org/GNOME/libsoup/-/issues/421
+- gedit has a buffer under-read
+	- https://gitlab.gnome.org/World/gedit/gedit/-/issues/631
 - dnf may crash on large transactions, especially (offline) system-upgrade
 	- please disable/remove it temporarily before invoking the update
 - There is an included `nohm` alias to start programs without it

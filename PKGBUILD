@@ -2,7 +2,7 @@
 # Maintainer: Tad <tad@spotco.us>
 pkgname=hardened_malloc
 pkgver=2025040400
-pkgrel=1
+pkgrel=2
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
 url="https://github.com/GrapheneOS/hardened_malloc"
@@ -73,6 +73,14 @@ build() {
 	ln -s mpk.mk config/mpk-x86-64-v3.mk;
 	ln -s mpk.mk config/mpk-x86-64-v4.mk;
 
+	#add a bocs variant
+	cp config/default.mk config/sizecheck.mk;
+	sed -i 's/CONFIG_SEAL_METADATA := false/CONFIG_SEAL_METADATA := true/' config/sizecheck.mk;
+	ln -s sizecheck.mk config/sizecheck-x86-64.mk;
+	ln -s sizecheck.mk config/sizecheck-x86-64-v2.mk;
+	ln -s sizecheck.mk config/sizecheck-x86-64-v3.mk;
+	ln -s sizecheck.mk config/sizecheck-x86-64-v4.mk;
+
 	make CONFIG_NATIVE=false CONFIG_WERROR=false VARIANT=default;
 	make CONFIG_NATIVE=false CONFIG_X86_64=true CONFIG_WERROR=false VARIANT=default-x86-64;
 	make CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=default-x86-64-v2;
@@ -96,6 +104,12 @@ build() {
 	make CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=mpk-x86-64-v2;
 	make CONFIG_NATIVE=false CONFIG_X86_64_V3=true CONFIG_WERROR=false VARIANT=mpk-x86-64-v3;
 	make CONFIG_NATIVE=false CONFIG_X86_64_V4=true CONFIG_WERROR=false VARIANT=mpk-x86-64-v4;
+
+	make CONFIG_NATIVE=false CONFIG_WERROR=false VARIANT=bocs;
+	make CONFIG_NATIVE=false CONFIG_X86_64=true CONFIG_WERROR=false VARIANT=bocs-x86-64;
+	make CONFIG_NATIVE=false CONFIG_X86_64_V2=true CONFIG_WERROR=false VARIANT=bocs-x86-64-v2;
+	make CONFIG_NATIVE=false CONFIG_X86_64_V3=true CONFIG_WERROR=false VARIANT=bocs-x86-64-v3;
+	make CONFIG_NATIVE=false CONFIG_X86_64_V4=true CONFIG_WERROR=false VARIANT=bocs-x86-64-v4;
 }
 
 package() {
@@ -123,6 +137,12 @@ package() {
 	install -Dm4644 "out-mpk-x86-64-v2/libhardened_malloc-mpk-x86-64-v2.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v2/libhardened_malloc-mpk.so;
 	install -Dm4644 "out-mpk-x86-64-v3/libhardened_malloc-mpk-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc-mpk.so;
 	install -Dm4644 "out-mpk-x86-64-v4/libhardened_malloc-mpk-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc-mpk.so;
+
+	install -Dm4644 "out-bocs/libhardened_malloc-bocs.so" "$pkgdir"/usr/lib/libhardened_malloc-bocs.so;
+	install -Dm4644 "out-bocs-x86-64/libhardened_malloc-bocs-x86-64.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64/libhardened_malloc-bocs.so;
+	install -Dm4644 "out-bocs-x86-64-v2/libhardened_malloc-bocs-x86-64-v2.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v2/libhardened_malloc-bocs.so;
+	install -Dm4644 "out-bocs-x86-64-v3/libhardened_malloc-bocs-x86-64-v3.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v3/libhardened_malloc-bocs.so;
+	install -Dm4644 "out-bocs-x86-64-v4/libhardened_malloc-bocs-x86-64-v4.so" "$pkgdir"/usr/lib/glibc-hwcaps/x86-64-v4/libhardened_malloc-bocs.so;
 
 	install -Dm644 ../ld.so.preload "$pkgdir"/etc/ld.so.preload;
 	install -Dm644 ../hardened_malloc.conf "$pkgdir"/etc/sysctl.d/hardened_malloc.conf;
