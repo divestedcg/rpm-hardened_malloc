@@ -66,7 +66,6 @@ Known Issues
 	- Our patched firejail available via Divested-RPM includes this workaround
 - certbot segfaults consistently
 	- Workaround included for certbot-renew systemd service
-	- 2023/11/26: can't reproduce anymore, maybe fixed
 - php-fpm
 	- Workaround included for php-fpm systemd service
 - virtiofs will stall out if used on host
