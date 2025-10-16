@@ -61,6 +61,10 @@ The default is chosen at install time depending:
 
 Known Issues
 ------------
+- GNOME 49 / GTK 4.20 has broken image loading
+	- glycin sets address space limits which are incompatible with hm
+	- this unfortunately makes system wide usage of hm no longer feasible
+	- https://gitlab.gnome.org/GNOME/glycin/-/issues/209
 - Firefox/Tor Browser/etc.
 	- Workaround: add `blacklist /etc/ld.so.preload` to their firejail profiles
 	- Our patched firejail available via Divested-RPM includes this workaround
