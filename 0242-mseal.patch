@@ -1,4 +1,4 @@
-From 96836f463b9c5fe4af85ef85b725fe5a295334db Mon Sep 17 00:00:00 2001
+From c8ddec71fa85f16eda4141613d9a1c0d1efced18 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
 Date: Wed, 24 Jul 2024 17:20:07 +0200
 Subject: [PATCH] linux: make use of mseal(2)
@@ -13,10 +13,10 @@ introduced irreversible syscall mseal(2).
  3 files changed, 24 insertions(+)
 
 diff --git a/h_malloc.c b/h_malloc.c
-index 15be0a2b..6ff13a48 100644
+index 58ae55e..4630515 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
-@@ -1285,7 +1285,12 @@ COLD static void init_slow_path(void) {
+@@ -1295,7 +1295,12 @@ COLD static void init_slow_path(void) {
  
      atomic_store_explicit(&ro.slab_region_end, slab_region_end, memory_order_release);
  
@@ -30,7 +30,7 @@ index 15be0a2b..6ff13a48 100644
      }
      memory_set_name(&ro, sizeof(ro), "malloc read-only after init");
 diff --git a/memory.c b/memory.c
-index 54340604..1a354ae0 100644
+index 2e54f6d..b165b05 100644
 --- a/memory.c
 +++ b/memory.c
 @@ -1,6 +1,8 @@
@@ -42,7 +42,7 @@ index 54340604..1a354ae0 100644
  
  #ifdef LABEL_MEMORY
  #include <sys/prctl.h>
-@@ -83,6 +85,22 @@ bool memory_protect_rw_metadata(void *ptr, size_t size) {
+@@ -91,6 +93,22 @@ bool memory_protect_rw_metadata(void *ptr, size_t size) {
      return memory_protect_prot(ptr, size, PROT_READ|PROT_WRITE, get_metadata_key());
  }
  
@@ -66,10 +66,10 @@ index 54340604..1a354ae0 100644
  bool memory_remap(void *old, size_t old_size, size_t new_size) {
      void *ptr = mremap(old, old_size, new_size, 0);
 diff --git a/memory.h b/memory.h
-index 6e4cd4da..12fb78bf 100644
+index d5e336b..82751b2 100644
 --- a/memory.h
 +++ b/memory.h
-@@ -19,6 +19,7 @@ bool memory_unmap(void *ptr, size_t size);
+@@ -22,6 +22,7 @@ bool memory_unmap(void *ptr, size_t size);
  bool memory_protect_ro(void *ptr, size_t size);
  bool memory_protect_rw(void *ptr, size_t size);
  bool memory_protect_rw_metadata(void *ptr, size_t size);
