@@ -1,4 +1,4 @@
-From 29753ce33818abe3d0022b37392b84e4447aad54 Mon Sep 17 00:00:00 2001
+From 4c3dab32bb540eaef8ab7999ca4f9086b0469fc5 Mon Sep 17 00:00:00 2001
 From: Tavi <tavi@divested.dev>
 Date: Sat, 22 Mar 2025 02:54:10 -0400
 Subject: [PATCH] perform size checks on various operations
@@ -238,7 +238,7 @@ index 88a0e1f5..7edd423d 100644
  CONFIG_SELF_INIT := true
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index 58ae55e8..4f7cbaf2 100644
+index 4579ca81..a96e66f0 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -20,6 +20,10 @@
@@ -252,7 +252,7 @@ index 58ae55e8..4f7cbaf2 100644
  #ifdef USE_PKEY
  #include <sys/mman.h>
  #endif
-@@ -528,7 +532,7 @@ static void set_canary(UNUSED const struct slab_metadata *metadata, UNUSED void
+@@ -537,7 +541,7 @@ static void set_canary(UNUSED const struct slab_metadata *metadata, UNUSED void
      }
  #endif
  
@@ -261,7 +261,7 @@ index 58ae55e8..4f7cbaf2 100644
  #endif
  }
  
-@@ -541,7 +545,7 @@ static void check_canary(UNUSED const struct slab_metadata *metadata, UNUSED con
+@@ -550,7 +554,7 @@ static void check_canary(UNUSED const struct slab_metadata *metadata, UNUSED con
  #endif
  
      u64 canary_value;
@@ -270,7 +270,7 @@ index 58ae55e8..4f7cbaf2 100644
  
  #ifdef HAS_ARM_MTE
      if (unlikely(canary_value == 0)) {
-@@ -831,7 +835,7 @@ static inline void deallocate_small(void *p, const size_t *expected_size) {
+@@ -837,7 +841,7 @@ static inline void deallocate_small(void *p, const size_t *expected_size) {
  #endif
  
          if (ZERO_ON_FREE && !skip_zero) {
@@ -279,7 +279,7 @@ index 58ae55e8..4f7cbaf2 100644
          }
      }
  
-@@ -1502,7 +1506,7 @@ EXPORT void *h_calloc(size_t nmemb, size_t size) {
+@@ -1513,7 +1517,7 @@ EXPORT void *h_calloc(size_t nmemb, size_t size) {
      total_size = adjust_size_for_canary(total_size);
      void *p = alloc(total_size);
      if (!ZERO_ON_FREE && likely(p != NULL) && total_size && total_size <= max_slab_size_class) {
@@ -288,7 +288,7 @@ index 58ae55e8..4f7cbaf2 100644
      }
  #ifdef HAS_ARM_MTE
      // use an assert instead of adding a conditional to memset() above (freed memory is always
-@@ -1625,7 +1629,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
+@@ -1636,7 +1640,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
                  mutex_unlock(&ra->lock);
  
                  if (memory_remap_fixed(old, old_size, new, size)) {
@@ -297,7 +297,7 @@ index 58ae55e8..4f7cbaf2 100644
                      deallocate_pages(old, old_size, old_guard_size);
                  } else {
                      memory_unmap((char *)old - old_guard_size, old_guard_size);
-@@ -1647,7 +1651,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
+@@ -1658,7 +1662,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
      if (copy_size > 0 && copy_size <= max_slab_size_class) {
          copy_size -= canary_size;
      }
@@ -306,7 +306,7 @@ index 58ae55e8..4f7cbaf2 100644
      if (old_in_slab_region) {
          deallocate_small(old, NULL);
      } else {
-@@ -1875,6 +1879,133 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
+@@ -1882,6 +1886,133 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
      return SIZE_MAX;
  }
  
@@ -828,7 +828,7 @@ index 00000000..de75eb7a
 +void musl_swab(const void *_src, void *_dest, ssize_t n);
 +wchar_t *musl_wmemset(wchar_t *dst, wchar_t value, size_t len);
 diff --git a/random.c b/random.c
-index 88835315..85825a84 100644
+index 8b91d47a..1ac0296c 100644
 --- a/random.c
 +++ b/random.c
 @@ -5,6 +5,10 @@
@@ -852,7 +852,7 @@ index 88835315..85825a84 100644
  
          buf = (char *)buf + copy_size;
 @@ -79,7 +83,7 @@ u16 get_random_u16(struct random_state *state) {
-     if (remaining < sizeof(value)) {
+     if (unlikely(remaining < sizeof(value))) {
          refill(state);
      }
 -    memcpy(&value, state->cache + state->index, sizeof(value));
@@ -861,7 +861,7 @@ index 88835315..85825a84 100644
      return value;
  }
 @@ -106,7 +110,7 @@ u64 get_random_u64(struct random_state *state) {
-     if (remaining < sizeof(value)) {
+     if (unlikely(remaining < sizeof(value))) {
          refill(state);
      }
 -    memcpy(&value, state->cache + state->index, sizeof(value));
@@ -943,15 +943,15 @@ index d37a6a7c..45cabd2a 100644
 +wmemset_valid_mismatched
  __pycache__/
 diff --git a/test/Makefile b/test/Makefile
-index 0eb39210..76f86f09 100644
+index a168e786..80221cc2 100644
 --- a/test/Makefile
 +++ b/test/Makefile
-@@ -67,7 +67,33 @@ EXECUTABLES := \
-     invalid_malloc_object_size_small \
-     invalid_malloc_object_size_small_quarantine \
+@@ -70,7 +70,33 @@ EXECUTABLES := \
      impossibly_large_malloc \
--    realloc_init
-+    realloc_init \
+     realloc_init \
+     malloc_zero_different \
+-    malloc_noreuse
++    malloc_noreuse \
 +    memcpy_buffer_overflow \
 +    memcpy_read_overflow \
 +    memcpy_valid_same \

@@ -1,7 +1,7 @@
 # Original Maintainer: Thibaut Sautereau (thithib) <thibaut at sautereau dot fr>
 # Maintainer: Tavi <tavi@divested.dev>
 pkgname=hardened_malloc
-pkgver=2026032000
+pkgver=2026040300
 pkgrel=1
 pkgdesc="Hardened allocator designed for modern systems"
 arch=('x86_64')
