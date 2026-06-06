@@ -13,7 +13,7 @@ introduced irreversible syscall mseal(2).
  3 files changed, 24 insertions(+)
 
 diff --git a/h_malloc.c b/h_malloc.c
-index 58ae55e..4630515 100644
+index 58ae55e8..46305155 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -1295,7 +1295,12 @@ COLD static void init_slow_path(void) {
@@ -30,7 +30,7 @@ index 58ae55e..4630515 100644
      }
      memory_set_name(&ro, sizeof(ro), "malloc read-only after init");
 diff --git a/memory.c b/memory.c
-index 2e54f6d..b165b05 100644
+index 2e54f6d8..b165b05a 100644
 --- a/memory.c
 +++ b/memory.c
 @@ -1,6 +1,8 @@
@@ -66,7 +66,7 @@ index 2e54f6d..b165b05 100644
  bool memory_remap(void *old, size_t old_size, size_t new_size) {
      void *ptr = mremap(old, old_size, new_size, 0);
 diff --git a/memory.h b/memory.h
-index d5e336b..82751b2 100644
+index d5e336be..82751b26 100644
 --- a/memory.h
 +++ b/memory.h
 @@ -22,6 +22,7 @@ bool memory_unmap(void *ptr, size_t size);

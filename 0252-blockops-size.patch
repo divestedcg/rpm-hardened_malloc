@@ -1,4 +1,4 @@
-From e8c580ca684a1a4111abfd76f5d90034d828d103 Mon Sep 17 00:00:00 2001
+From b40eca2cfc83cf16f574d92e39d7ba7df7f8fb3c Mon Sep 17 00:00:00 2001
 From: Tavi <tavi@divested.dev>
 Date: Sat, 22 Mar 2025 02:54:10 -0400
 Subject: [PATCH] perform size checks on various operations
@@ -88,7 +88,7 @@ Co-authored-by: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
  create mode 100644 wmemset.c
 
 diff --git a/Android.bp b/Android.bp
-index 3926aac..4c1bfb3 100644
+index 1b807a77..28114e0e 100644
 --- a/Android.bp
 +++ b/Android.bp
 @@ -28,6 +28,7 @@ common_cflags = [
@@ -100,7 +100,7 @@ index 3926aac..4c1bfb3 100644
  
  cc_defaults {
 diff --git a/CREDITS b/CREDITS
-index 31b6875..be73f35 100644
+index 31b68754..be73f35f 100644
 --- a/CREDITS
 +++ b/CREDITS
 @@ -23,6 +23,30 @@ h_malloc.c open-addressed hash table (regions_grow, regions_insert, regions_find
@@ -135,7 +135,7 @@ index 31b6875..be73f35 100644
  
      Copyright (C) 2010 - 2019 ridiculous_fish, <libdivide@ridiculousfish.com>
 diff --git a/Makefile b/Makefile
-index de8d82c..b8ce9dd 100644
+index 7ad20e87..85f458c6 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -40,6 +40,10 @@ CXXFLAGS := $(CXXFLAGS) -std=c++17 -fsized-deallocation $(SHARED_FLAGS)
@@ -206,7 +206,7 @@ index de8d82c..b8ce9dd 100644
  
  tidy:
 diff --git a/README.md b/README.md
-index 089dd1a..41257e6 100644
+index 7ffe1142..8a91e989 100644
 --- a/README.md
 +++ b/README.md
 @@ -279,6 +279,9 @@ The following boolean configuration options are available:
@@ -220,7 +220,7 @@ index 089dd1a..41257e6 100644
  The following integer configuration options are available:
  
 diff --git a/config/default.mk b/config/default.mk
-index d8f03a7..9a81f2b 100644
+index d8f03a78..9a81f2b3 100644
 --- a/config/default.mk
 +++ b/config/default.mk
 @@ -22,3 +22,4 @@ CONFIG_N_ARENA := 4
@@ -229,7 +229,7 @@ index d8f03a7..9a81f2b 100644
  CONFIG_LABEL_MEMORY := false
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/config/light.mk b/config/light.mk
-index da8676d..01ce8d6 100644
+index da8676d9..01ce8d6d 100644
 --- a/config/light.mk
 +++ b/config/light.mk
 @@ -22,3 +22,4 @@ CONFIG_N_ARENA := 4
@@ -238,7 +238,7 @@ index da8676d..01ce8d6 100644
  CONFIG_LABEL_MEMORY := false
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index 88d50c9..a8dd3d0 100644
+index be66d964..ede6c4f7 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -20,6 +20,10 @@
@@ -279,7 +279,7 @@ index 88d50c9..a8dd3d0 100644
          }
      }
  
-@@ -1532,7 +1536,7 @@ EXPORT void *h_calloc(size_t nmemb, size_t size) {
+@@ -1537,7 +1541,7 @@ EXPORT void *h_calloc(size_t nmemb, size_t size) {
      total_size = adjust_size_for_canary(total_size);
      void *p = alloc(total_size);
      if (!ZERO_ON_FREE && likely(p != NULL) && total_size && total_size <= max_slab_size_class) {
@@ -288,7 +288,7 @@ index 88d50c9..a8dd3d0 100644
      }
  #ifdef HAS_ARM_MTE
      // use an assert instead of adding a conditional to memset() above (freed memory is always
-@@ -1655,7 +1659,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
+@@ -1660,7 +1664,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
                  mutex_unlock(&ra->lock);
  
                  if (memory_remap_fixed(old, old_size, new, size)) {
@@ -297,7 +297,7 @@ index 88d50c9..a8dd3d0 100644
                      deallocate_pages(old, old_size, old_guard_size);
                  } else {
                      memory_unmap((char *)old - old_guard_size, old_guard_size);
-@@ -1677,7 +1681,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
+@@ -1682,7 +1686,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
      if (copy_size > 0 && copy_size <= max_slab_size_class) {
          copy_size -= canary_size;
      }
@@ -306,7 +306,7 @@ index 88d50c9..a8dd3d0 100644
      if (old_in_slab_region) {
          deallocate_small(old, NULL);
      } else {
-@@ -1952,6 +1956,133 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
+@@ -1959,6 +1963,133 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
      return SIZE_MAX;
  }
  
@@ -441,7 +441,7 @@ index 88d50c9..a8dd3d0 100644
  #ifdef __ANDROID__
      if (param == M_PURGE) {
 diff --git a/include/h_malloc.h b/include/h_malloc.h
-index 88e85b4..3e0cc1a 100644
+index 88e85b4d..3e0cc1a5 100644
 --- a/include/h_malloc.h
 +++ b/include/h_malloc.h
 @@ -56,6 +56,27 @@ __attribute__((malloc)) __attribute__((alloc_size(2))) __attribute__((alloc_alig
@@ -474,7 +474,7 @@ index 88e85b4..3e0cc1a 100644
  
 diff --git a/memccpy.c b/memccpy.c
 new file mode 100644
-index 0000000..e01a9eb
+index 00000000..e01a9eb7
 --- /dev/null
 +++ b/memccpy.c
 @@ -0,0 +1,38 @@
@@ -518,7 +518,7 @@ index 0000000..e01a9eb
 +}
 diff --git a/memcpy.c b/memcpy.c
 new file mode 100644
-index 0000000..f9cff3f
+index 00000000..f9cff3fe
 --- /dev/null
 +++ b/memcpy.c
 @@ -0,0 +1,132 @@
@@ -656,7 +656,7 @@ index 0000000..f9cff3f
 +}
 diff --git a/memmove.c b/memmove.c
 new file mode 100644
-index 0000000..a533b5a
+index 00000000..a533b5a2
 --- /dev/null
 +++ b/memmove.c
 @@ -0,0 +1,50 @@
@@ -712,7 +712,7 @@ index 0000000..a533b5a
 +}
 diff --git a/memset.c b/memset.c
 new file mode 100644
-index 0000000..6af5571
+index 00000000..6af5571e
 --- /dev/null
 +++ b/memset.c
 @@ -0,0 +1,94 @@
@@ -812,7 +812,7 @@ index 0000000..6af5571
 +}
 diff --git a/musl.h b/musl.h
 new file mode 100644
-index 0000000..de75eb7
+index 00000000..de75eb7a
 --- /dev/null
 +++ b/musl.h
 @@ -0,0 +1,11 @@
@@ -828,7 +828,7 @@ index 0000000..de75eb7
 +void musl_swab(const void *_src, void *_dest, ssize_t n);
 +wchar_t *musl_wmemset(wchar_t *dst, wchar_t value, size_t len);
 diff --git a/random.c b/random.c
-index 4c2f023..a5572a0 100644
+index 8f75cc10..1fdaad31 100644
 --- a/random.c
 +++ b/random.c
 @@ -5,6 +5,10 @@
@@ -860,7 +860,7 @@ index 4c2f023..a5572a0 100644
      state->index += sizeof(value);
      return value;
  }
-@@ -107,7 +111,7 @@ u64 get_random_u64(struct random_state *state) {
+@@ -134,7 +138,7 @@ u64 get_random_u64(struct random_state *state) {
      if (unlikely(remaining < sizeof(value))) {
          refill(state);
      }
@@ -870,10 +870,10 @@ index 4c2f023..a5572a0 100644
      return value;
  }
 diff --git a/random.h b/random.h
-index 14703bb..58cf32e 100644
+index 46ac24ea..b06022cf 100644
 --- a/random.h
 +++ b/random.h
-@@ -22,4 +22,10 @@ u16 get_random_u16_uniform(struct random_state *state, u16 bound);
+@@ -24,4 +24,10 @@ u32 get_random_u32_uniform(struct random_state *state, u32 bound);
  u64 get_random_u64(struct random_state *state);
  u64 get_random_u64_uniform(struct random_state *state, u64 bound);
  
@@ -886,7 +886,7 @@ index 14703bb..58cf32e 100644
  #endif
 diff --git a/swab.c b/swab.c
 new file mode 100644
-index 0000000..9fea96f
+index 00000000..9fea96fd
 --- /dev/null
 +++ b/swab.c
 @@ -0,0 +1,17 @@
@@ -908,7 +908,7 @@ index 0000000..9fea96f
 +       }
 +}
 diff --git a/test/.gitignore b/test/.gitignore
-index 9d9c4cf..58379ac 100644
+index 9d9c4cfb..58379acf 100644
 --- a/test/.gitignore
 +++ b/test/.gitignore
 @@ -44,4 +44,30 @@ uninitialized_read_small
@@ -943,12 +943,12 @@ index 9d9c4cf..58379ac 100644
 +wmemset_valid_mismatched
  __pycache__/
 diff --git a/test/Makefile b/test/Makefile
-index 41b48a4..3242f46 100644
+index fb680a4d..325dc9fd 100644
 --- a/test/Makefile
 +++ b/test/Makefile
-@@ -75,7 +75,33 @@ EXECUTABLES := \
-     impossibly_large_malloc \
-     realloc_init \
+@@ -79,7 +79,33 @@ EXECUTABLES := \
+     calloc_overflow \
+     calloc_zeroed \
      malloc_zero_different \
 -    malloc_noreuse
 +    malloc_noreuse \
@@ -983,7 +983,7 @@ index 41b48a4..3242f46 100644
  
 diff --git a/test/memccpy_buffer_overflow.c b/test/memccpy_buffer_overflow.c
 new file mode 100644
-index 0000000..ca0c5d1
+index 00000000..ca0c5d1d
 --- /dev/null
 +++ b/test/memccpy_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -1004,7 +1004,7 @@ index 0000000..ca0c5d1
 +}
 diff --git a/test/memccpy_read_overflow.c b/test/memccpy_read_overflow.c
 new file mode 100644
-index 0000000..3b15f53
+index 00000000..3b15f539
 --- /dev/null
 +++ b/test/memccpy_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1025,7 +1025,7 @@ index 0000000..3b15f53
 +}
 diff --git a/test/memccpy_valid_mismatched.c b/test/memccpy_valid_mismatched.c
 new file mode 100644
-index 0000000..b5434f7
+index 00000000..b5434f7a
 --- /dev/null
 +++ b/test/memccpy_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1046,7 +1046,7 @@ index 0000000..b5434f7
 +}
 diff --git a/test/memccpy_valid_same.c b/test/memccpy_valid_same.c
 new file mode 100644
-index 0000000..a9ba59b
+index 00000000..a9ba59b3
 --- /dev/null
 +++ b/test/memccpy_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1067,7 +1067,7 @@ index 0000000..a9ba59b
 +}
 diff --git a/test/memcpy_buffer_overflow.c b/test/memcpy_buffer_overflow.c
 new file mode 100644
-index 0000000..16cab77
+index 00000000..16cab77e
 --- /dev/null
 +++ b/test/memcpy_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -1088,7 +1088,7 @@ index 0000000..16cab77
 +}
 diff --git a/test/memcpy_read_overflow.c b/test/memcpy_read_overflow.c
 new file mode 100644
-index 0000000..cf51498
+index 00000000..cf51498a
 --- /dev/null
 +++ b/test/memcpy_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1109,7 +1109,7 @@ index 0000000..cf51498
 +}
 diff --git a/test/memcpy_valid_mismatched.c b/test/memcpy_valid_mismatched.c
 new file mode 100644
-index 0000000..81d718e
+index 00000000..81d718e1
 --- /dev/null
 +++ b/test/memcpy_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1130,7 +1130,7 @@ index 0000000..81d718e
 +}
 diff --git a/test/memcpy_valid_same.c b/test/memcpy_valid_same.c
 new file mode 100644
-index 0000000..1b408f0
+index 00000000..1b408f01
 --- /dev/null
 +++ b/test/memcpy_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1151,7 +1151,7 @@ index 0000000..1b408f0
 +}
 diff --git a/test/memmove_buffer_overflow.c b/test/memmove_buffer_overflow.c
 new file mode 100644
-index 0000000..c83bf97
+index 00000000..c83bf97c
 --- /dev/null
 +++ b/test/memmove_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -1172,7 +1172,7 @@ index 0000000..c83bf97
 +}
 diff --git a/test/memmove_read_overflow.c b/test/memmove_read_overflow.c
 new file mode 100644
-index 0000000..73e4509
+index 00000000..73e4509a
 --- /dev/null
 +++ b/test/memmove_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1193,7 +1193,7 @@ index 0000000..73e4509
 +}
 diff --git a/test/memmove_valid_mismatched.c b/test/memmove_valid_mismatched.c
 new file mode 100644
-index 0000000..5dd1bde
+index 00000000..5dd1bde4
 --- /dev/null
 +++ b/test/memmove_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1214,7 +1214,7 @@ index 0000000..5dd1bde
 +}
 diff --git a/test/memmove_valid_same.c b/test/memmove_valid_same.c
 new file mode 100644
-index 0000000..2593abc
+index 00000000..2593abcc
 --- /dev/null
 +++ b/test/memmove_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1235,7 +1235,7 @@ index 0000000..2593abc
 +}
 diff --git a/test/memset_buffer_overflow.c b/test/memset_buffer_overflow.c
 new file mode 100644
-index 0000000..8f9e989
+index 00000000..8f9e9895
 --- /dev/null
 +++ b/test/memset_buffer_overflow.c
 @@ -0,0 +1,13 @@
@@ -1254,7 +1254,7 @@ index 0000000..8f9e989
 +}
 diff --git a/test/memset_valid_mismatched.c b/test/memset_valid_mismatched.c
 new file mode 100644
-index 0000000..f57fef6
+index 00000000..f57fef67
 --- /dev/null
 +++ b/test/memset_valid_mismatched.c
 @@ -0,0 +1,13 @@
@@ -1273,7 +1273,7 @@ index 0000000..f57fef6
 +}
 diff --git a/test/memset_valid_same.c b/test/memset_valid_same.c
 new file mode 100644
-index 0000000..824c18f
+index 00000000..824c18f4
 --- /dev/null
 +++ b/test/memset_valid_same.c
 @@ -0,0 +1,13 @@
@@ -1291,10 +1291,10 @@ index 0000000..824c18f
 +    return 0;
 +}
 diff --git a/test/test_smc.py b/test/test_smc.py
-index 0d5665b..f2d5358 100644
+index c8a350d9..8146292a 100644
 --- a/test/test_smc.py
 +++ b/test/test_smc.py
-@@ -285,6 +285,160 @@ def test_malloc_zero_different(self):
+@@ -303,6 +303,160 @@ def test_malloc_zero_different(self):
      def test_malloc_noreuse(self):
          _stdout, _stderr, returncode = self.run_test(
              "malloc_noreuse")
@@ -1457,7 +1457,7 @@ index 0d5665b..f2d5358 100644
  if __name__ == '__main__':
 diff --git a/test/wmemcpy_buffer_overflow.c b/test/wmemcpy_buffer_overflow.c
 new file mode 100644
-index 0000000..6734943
+index 00000000..6734943c
 --- /dev/null
 +++ b/test/wmemcpy_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -1478,7 +1478,7 @@ index 0000000..6734943
 +}
 diff --git a/test/wmemcpy_read_overflow.c b/test/wmemcpy_read_overflow.c
 new file mode 100644
-index 0000000..4d30c46
+index 00000000..4d30c469
 --- /dev/null
 +++ b/test/wmemcpy_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1499,7 +1499,7 @@ index 0000000..4d30c46
 +}
 diff --git a/test/wmemcpy_valid_mismatched.c b/test/wmemcpy_valid_mismatched.c
 new file mode 100644
-index 0000000..21ccff6
+index 00000000..21ccff6f
 --- /dev/null
 +++ b/test/wmemcpy_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1520,7 +1520,7 @@ index 0000000..21ccff6
 +}
 diff --git a/test/wmemcpy_valid_same.c b/test/wmemcpy_valid_same.c
 new file mode 100644
-index 0000000..5d3633c
+index 00000000..5d3633c2
 --- /dev/null
 +++ b/test/wmemcpy_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1541,7 +1541,7 @@ index 0000000..5d3633c
 +}
 diff --git a/test/wmemmove_buffer_overflow.c b/test/wmemmove_buffer_overflow.c
 new file mode 100644
-index 0000000..aa78ace
+index 00000000..aa78ace3
 --- /dev/null
 +++ b/test/wmemmove_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -1562,7 +1562,7 @@ index 0000000..aa78ace
 +}
 diff --git a/test/wmemmove_read_overflow.c b/test/wmemmove_read_overflow.c
 new file mode 100644
-index 0000000..3f1338f
+index 00000000..3f1338fb
 --- /dev/null
 +++ b/test/wmemmove_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1583,7 +1583,7 @@ index 0000000..3f1338f
 +}
 diff --git a/test/wmemmove_valid_mismatched.c b/test/wmemmove_valid_mismatched.c
 new file mode 100644
-index 0000000..2a77f78
+index 00000000..2a77f78b
 --- /dev/null
 +++ b/test/wmemmove_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1604,7 +1604,7 @@ index 0000000..2a77f78
 +}
 diff --git a/test/wmemmove_valid_same.c b/test/wmemmove_valid_same.c
 new file mode 100644
-index 0000000..a738d20
+index 00000000..a738d205
 --- /dev/null
 +++ b/test/wmemmove_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1625,7 +1625,7 @@ index 0000000..a738d20
 +}
 diff --git a/test/wmemset_buffer_overflow.c b/test/wmemset_buffer_overflow.c
 new file mode 100644
-index 0000000..78cf746
+index 00000000..78cf7464
 --- /dev/null
 +++ b/test/wmemset_buffer_overflow.c
 @@ -0,0 +1,13 @@
@@ -1644,7 +1644,7 @@ index 0000000..78cf746
 +}
 diff --git a/test/wmemset_valid_mismatched.c b/test/wmemset_valid_mismatched.c
 new file mode 100644
-index 0000000..91acb50
+index 00000000..91acb50d
 --- /dev/null
 +++ b/test/wmemset_valid_mismatched.c
 @@ -0,0 +1,13 @@
@@ -1663,7 +1663,7 @@ index 0000000..91acb50
 +}
 diff --git a/test/wmemset_valid_same.c b/test/wmemset_valid_same.c
 new file mode 100644
-index 0000000..a3673cc
+index 00000000..a3673cc8
 --- /dev/null
 +++ b/test/wmemset_valid_same.c
 @@ -0,0 +1,13 @@
@@ -1682,7 +1682,7 @@ index 0000000..a3673cc
 +}
 diff --git a/wmemset.c b/wmemset.c
 new file mode 100644
-index 0000000..d8bcbb5
+index 00000000..d8bcbb5d
 --- /dev/null
 +++ b/wmemset.c
 @@ -0,0 +1,12 @@
