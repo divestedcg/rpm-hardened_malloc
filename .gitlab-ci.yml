@@ -8,8 +8,8 @@ before_script:
 build_rpm:
   stage: build
   script:
-    - wget https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/2026060100
-    - echo "eda250ffa8a525e1ae93060c5bfe4f1956689b20b2141279647a110442e54d965bc820b4298d4c7ab45a8ffbbe1f0a3547f46683671c47c7095c7ada93318603  2026060100" | sha512sum -c
+    - wget https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/2026100600
+    - echo "139767c8d48caea5cf7180a46bad9c39b398842a8f5d90c1388333a10596cc156440f7eb7b23530e1c79f9f8a77e194987429c3ef793ffb948eb69a5c49db009  2026100600" | sha512sum -c
     - fedpkg --release f44 local
   artifacts:
     paths:

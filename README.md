@@ -14,7 +14,7 @@ Upstream Project
 
 Compatibility
 -------------
-- Fedora 40/41/42/etc.
+- Fedora 44/45/etc.
 - Arch Linux
 
 Prebuilts
@@ -67,7 +67,6 @@ Known Issues
 	- https://gitlab.gnome.org/GNOME/glycin/-/issues/209
 - Firefox/Tor Browser/etc.
 	- Workaround: add `blacklist /etc/ld.so.preload` to their firejail profiles
-	- Our patched firejail available via Divested-RPM includes this workaround
 - certbot segfaults consistently
 	- Workaround included for certbot-renew systemd service
 - php-fpm
@@ -94,6 +93,7 @@ Known Issues
 	- https://gitlab.gnome.org/World/gedit/gedit/-/issues/631
 - dnf may crash on large transactions, especially (offline) system-upgrade
 	- please disable/remove it temporarily before invoking the update
+- malcontent-timerd will abort due to its seccomp filter not allowing madvise
 - There is an included `nohm` alias to start programs without it
 - You can also fetch journald output with `gethmlogs` or `gethmlogsall` for current boot or all boots respectively
 

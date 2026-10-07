@@ -1,4 +1,4 @@
-From b40eca2cfc83cf16f574d92e39d7ba7df7f8fb3c Mon Sep 17 00:00:00 2001
+From 97a87e1c6309afa42b266ac1b0087bc0adc948f5 Mon Sep 17 00:00:00 2001
 From: Tavi <tavi@divested.dev>
 Date: Sat, 22 Mar 2025 02:54:10 -0400
 Subject: [PATCH] perform size checks on various operations
@@ -12,7 +12,7 @@ Co-authored-by: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
  README.md                        |   3 +
  config/default.mk                |   1 +
  config/light.mk                  |   1 +
- h_malloc.c                       | 143 ++++++++++++++++++++++++++--
+ h_malloc.c                       | 144 ++++++++++++++++++++++++++++-
  include/h_malloc.h               |  21 +++++
  memccpy.c                        |  38 ++++++++
  memcpy.c                         | 132 ++++++++++++++++++++++++++
@@ -52,7 +52,7 @@ Co-authored-by: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
  test/wmemset_valid_mismatched.c  |  13 +++
  test/wmemset_valid_same.c        |  13 +++
  wmemset.c                        |  12 +++
- 46 files changed, 1165 insertions(+), 13 deletions(-)
+ 46 files changed, 1167 insertions(+), 12 deletions(-)
  create mode 100644 memccpy.c
  create mode 100644 memcpy.c
  create mode 100644 memmove.c
@@ -88,7 +88,7 @@ Co-authored-by: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
  create mode 100644 wmemset.c
 
 diff --git a/Android.bp b/Android.bp
-index 1b807a77..28114e0e 100644
+index 1cb24eef..ffc03e7b 100644
 --- a/Android.bp
 +++ b/Android.bp
 @@ -28,6 +28,7 @@ common_cflags = [
@@ -135,10 +135,10 @@ index 31b68754..be73f35f 100644
  
      Copyright (C) 2010 - 2019 ridiculous_fish, <libdivide@ridiculousfish.com>
 diff --git a/Makefile b/Makefile
-index 7ad20e87..85f458c6 100644
+index df29f65b..3581ff47 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -40,6 +40,10 @@ CXXFLAGS := $(CXXFLAGS) -std=c++17 -fsized-deallocation $(SHARED_FLAGS)
+@@ -42,6 +42,10 @@ CXXFLAGS := $(CXXFLAGS) -std=c++17 -fsized-deallocation $(SHARED_FLAGS)
  LDFLAGS := $(LDFLAGS) -Wl,-O1,--as-needed,-z,defs,-z,relro,-z,now,-z,nodlopen,-z,text
  
  SOURCES := chacha.c h_malloc.c memory.c pages.c random.c util.c
@@ -149,7 +149,7 @@ index 7ad20e87..85f458c6 100644
  OBJECTS := $(SOURCES:.c=.o)
  
  ifeq ($(CONFIG_CXX_ALLOCATOR),true)
-@@ -93,6 +97,10 @@ ifeq (,$(filter $(CONFIG_LABEL_MEMORY),true false))
+@@ -95,6 +99,10 @@ ifeq (,$(filter $(CONFIG_LABEL_MEMORY),true false))
      $(error CONFIG_LABEL_MEMORY must be true or false)
  endif
  
@@ -160,7 +160,7 @@ index 7ad20e87..85f458c6 100644
  CPPFLAGS += \
      -DCONFIG_SEAL_METADATA=$(CONFIG_SEAL_METADATA) \
      -DZERO_ON_FREE=$(CONFIG_ZERO_ON_FREE) \
-@@ -113,7 +121,8 @@ CPPFLAGS += \
+@@ -115,7 +123,8 @@ CPPFLAGS += \
      -DN_ARENA=$(CONFIG_N_ARENA) \
      -DCONFIG_STATS=$(CONFIG_STATS) \
      -DCONFIG_SELF_INIT=$(CONFIG_SELF_INIT) \
@@ -170,7 +170,7 @@ index 7ad20e87..85f458c6 100644
  
  $(OUT)/libhardened_malloc$(SUFFIX).so: $(OBJECTS) | $(OUT)
  	$(CC) $(CFLAGS) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
-@@ -123,7 +132,7 @@ $(OUT):
+@@ -125,7 +134,7 @@ $(OUT):
  
  $(OUT)/chacha.o: chacha.c chacha.h util.h $(CONFIG_FILE) | $(OUT)
  	$(COMPILE.c) $(OUTPUT_OPTION) $<
@@ -179,7 +179,7 @@ index 7ad20e87..85f458c6 100644
  	$(COMPILE.c) $(OUTPUT_OPTION) $<
  $(OUT)/memory.o: memory.c memory.h util.h $(CONFIG_FILE) | $(OUT)
  	$(COMPILE.c) $(OUTPUT_OPTION) $<
-@@ -131,11 +140,24 @@ $(OUT)/new.o: new.cc include/h_malloc.h util.h $(CONFIG_FILE) | $(OUT)
+@@ -133,11 +142,24 @@ $(OUT)/new.o: new.cc include/h_malloc.h util.h $(CONFIG_FILE) | $(OUT)
  	$(COMPILE.cc) $(OUTPUT_OPTION) $<
  $(OUT)/pages.o: pages.c pages.h memory.h util.h $(CONFIG_FILE) | $(OUT)
  	$(COMPILE.c) $(OUTPUT_OPTION) $<
@@ -206,7 +206,7 @@ index 7ad20e87..85f458c6 100644
  
  tidy:
 diff --git a/README.md b/README.md
-index 7ffe1142..8a91e989 100644
+index 41634759..810ca421 100644
 --- a/README.md
 +++ b/README.md
 @@ -279,6 +279,9 @@ The following boolean configuration options are available:
@@ -238,7 +238,7 @@ index da8676d9..01ce8d6d 100644
  CONFIG_LABEL_MEMORY := false
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index be66d964..ede6c4f7 100644
+index ef66b37a..b74e3ec7 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -20,6 +20,10 @@
@@ -252,7 +252,7 @@ index be66d964..ede6c4f7 100644
  #ifdef USE_PKEY
  #include <sys/mman.h>
  #endif
-@@ -539,7 +543,7 @@ static void set_canary(UNUSED const struct slab_metadata *metadata, UNUSED void
+@@ -530,7 +534,7 @@ static void set_canary(UNUSED const struct slab_metadata *metadata, UNUSED void
      }
  #endif
  
@@ -261,7 +261,7 @@ index be66d964..ede6c4f7 100644
  #endif
  }
  
-@@ -552,7 +556,7 @@ static void check_canary(UNUSED const struct slab_metadata *metadata, UNUSED con
+@@ -543,7 +547,7 @@ static void check_canary(UNUSED const struct slab_metadata *metadata, UNUSED con
  #endif
  
      u64 canary_value;
@@ -270,7 +270,7 @@ index be66d964..ede6c4f7 100644
  
  #ifdef HAS_ARM_MTE
      if (unlikely(canary_value == 0)) {
-@@ -843,7 +847,7 @@ static inline void deallocate_small(void *p, const size_t *expected_size) {
+@@ -834,7 +838,7 @@ static inline void deallocate_small(void *p, const size_t *expected_size) {
  #endif
  
          if (ZERO_ON_FREE && !skip_zero) {
@@ -279,7 +279,7 @@ index be66d964..ede6c4f7 100644
          }
      }
  
-@@ -1537,7 +1541,7 @@ EXPORT void *h_calloc(size_t nmemb, size_t size) {
+@@ -1516,7 +1520,7 @@ EXPORT void *h_calloc(size_t nmemb, size_t size) {
      total_size = adjust_size_for_canary(total_size);
      void *p = alloc(total_size);
      if (!ZERO_ON_FREE && likely(p != NULL) && total_size && total_size <= max_slab_size_class) {
@@ -288,16 +288,7 @@ index be66d964..ede6c4f7 100644
      }
  #ifdef HAS_ARM_MTE
      // use an assert instead of adding a conditional to memset() above (freed memory is always
-@@ -1660,7 +1664,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
-                 mutex_unlock(&ra->lock);
- 
-                 if (memory_remap_fixed(old, old_size, new, size)) {
--                    memcpy(new, old, copy_size);
-+                    h_memcpy_internal(new, old, copy_size);
-                     deallocate_pages(old, old_size, old_guard_size);
-                 } else {
-                     memory_unmap((char *)old - old_guard_size, old_guard_size);
-@@ -1682,7 +1686,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
+@@ -1694,7 +1698,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
      if (copy_size > 0 && copy_size <= max_slab_size_class) {
          copy_size -= canary_size;
      }
@@ -306,7 +297,7 @@ index be66d964..ede6c4f7 100644
      if (old_in_slab_region) {
          deallocate_small(old, NULL);
      } else {
-@@ -1959,6 +1963,133 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
+@@ -1983,6 +1987,136 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
      return SIZE_MAX;
  }
  
@@ -328,7 +319,10 @@ index be66d964..ede6c4f7 100644
 +}
 +
 +EXPORT void *memccpy(void *restrict dst, const void *restrict src, int value, size_t len) {
-+    if (unlikely(dst == src || len == 0)) {
++    if (unlikely(len == 0)) {
++        return NULL;
++    }
++    if (unlikely(dst == src)) {
 +        return dst;
 +    }
 +    if (unlikely(dst < (src + len) && (dst + len) > src)) {
@@ -441,10 +435,10 @@ index be66d964..ede6c4f7 100644
  #ifdef __ANDROID__
      if (param == M_PURGE) {
 diff --git a/include/h_malloc.h b/include/h_malloc.h
-index 88e85b4d..3e0cc1a5 100644
+index 0dcead34..0d0107fe 100644
 --- a/include/h_malloc.h
 +++ b/include/h_malloc.h
-@@ -56,6 +56,27 @@ __attribute__((malloc)) __attribute__((alloc_size(2))) __attribute__((alloc_alig
+@@ -58,6 +58,27 @@ __attribute__((malloc)) __attribute__((alloc_size(2))) __attribute__((alloc_alig
  void *h_aligned_alloc(size_t alignment, size_t size);
  void h_free(void *ptr);
  
@@ -828,7 +822,7 @@ index 00000000..de75eb7a
 +void musl_swab(const void *_src, void *_dest, ssize_t n);
 +wchar_t *musl_wmemset(wchar_t *dst, wchar_t value, size_t len);
 diff --git a/random.c b/random.c
-index 8f75cc10..1fdaad31 100644
+index ba3d4810..82f212ca 100644
 --- a/random.c
 +++ b/random.c
 @@ -5,6 +5,10 @@
@@ -860,7 +854,7 @@ index 8f75cc10..1fdaad31 100644
      state->index += sizeof(value);
      return value;
  }
-@@ -134,7 +138,7 @@ u64 get_random_u64(struct random_state *state) {
+@@ -118,7 +122,7 @@ u64 get_random_u64(struct random_state *state) {
      if (unlikely(remaining < sizeof(value))) {
          refill(state);
      }
@@ -870,10 +864,10 @@ index 8f75cc10..1fdaad31 100644
      return value;
  }
 diff --git a/random.h b/random.h
-index 46ac24ea..b06022cf 100644
+index 6b656946..6475e5b0 100644
 --- a/random.h
 +++ b/random.h
-@@ -24,4 +24,10 @@ u32 get_random_u32_uniform(struct random_state *state, u32 bound);
+@@ -23,4 +23,10 @@ u32 get_random_u32(struct random_state *state);
  u64 get_random_u64(struct random_state *state);
  u64 get_random_u64_uniform(struct random_state *state, u64 bound);
  
@@ -908,13 +902,13 @@ index 00000000..9fea96fd
 +       }
 +}
 diff --git a/test/.gitignore b/test/.gitignore
-index 9d9c4cfb..58379acf 100644
+index 502b1674..38bd75de 100644
 --- a/test/.gitignore
 +++ b/test/.gitignore
-@@ -44,4 +44,30 @@ uninitialized_read_small
- realloc_init
- malloc_zero_different
- malloc_noreuse
+@@ -60,4 +60,30 @@ free_sized_large
+ free_sized_small
+ invalid_aligned_sized_delete_large
+ invalid_aligned_sized_delete_small
 +memcpy_buffer_overflow
 +memcpy_read_overflow
 +memcpy_valid_same
@@ -943,12 +937,12 @@ index 9d9c4cfb..58379acf 100644
 +wmemset_valid_mismatched
  __pycache__/
 diff --git a/test/Makefile b/test/Makefile
-index fb680a4d..325dc9fd 100644
+index 2e816412..2514d17d 100644
 --- a/test/Makefile
 +++ b/test/Makefile
-@@ -79,7 +79,33 @@ EXECUTABLES := \
-     calloc_overflow \
-     calloc_zeroed \
+@@ -86,7 +86,33 @@ EXECUTABLES := \
+     aligned_alloc_einval \
+     aligned_alloc_zero_size \
      malloc_zero_different \
 -    malloc_noreuse
 +    malloc_noreuse \
@@ -1291,10 +1285,10 @@ index 00000000..824c18f4
 +    return 0;
 +}
 diff --git a/test/test_smc.py b/test/test_smc.py
-index c8a350d9..8146292a 100644
+index 58f9c75c..af1f3cba 100644
 --- a/test/test_smc.py
 +++ b/test/test_smc.py
-@@ -303,6 +303,160 @@ def test_malloc_zero_different(self):
+@@ -341,6 +341,160 @@ def test_malloc_zero_different(self):
      def test_malloc_noreuse(self):
          _stdout, _stderr, returncode = self.run_test(
              "malloc_noreuse")
