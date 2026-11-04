@@ -16,7 +16,7 @@ Source9: 0242-mseal.patch
 Source10: 0252-blockops-size.patch
 Summary: Hardened memory allocator from GrapheneOS
 URL: https://github.com/GrapheneOS/hardened_malloc
-Version: 2026100600
+Version: 2026110200
 
 %description
 Hardened allocator designed for modern systems
