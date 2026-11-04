@@ -1,4 +1,4 @@
-From 97a87e1c6309afa42b266ac1b0087bc0adc948f5 Mon Sep 17 00:00:00 2001
+From 0c220c68f498d9712b94a3077b9f852f492c34fc Mon Sep 17 00:00:00 2001
 From: Tavi <tavi@divested.dev>
 Date: Sat, 22 Mar 2025 02:54:10 -0400
 Subject: [PATCH] perform size checks on various operations
@@ -12,14 +12,14 @@ Co-authored-by: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
  README.md                        |   3 +
  config/default.mk                |   1 +
  config/light.mk                  |   1 +
- h_malloc.c                       | 144 ++++++++++++++++++++++++++++-
+ h_malloc.c                       | 153 +++++++++++++++++++++++++++++-
  include/h_malloc.h               |  21 +++++
  memccpy.c                        |  38 ++++++++
  memcpy.c                         | 132 ++++++++++++++++++++++++++
  memmove.c                        |  50 ++++++++++
  memset.c                         |  94 +++++++++++++++++++
  musl.h                           |  11 +++
- random.c                         |  10 +-
+ random.c                         |  12 ++-
  random.h                         |   6 ++
  swab.c                           |  17 ++++
  test/.gitignore                  |  26 ++++++
@@ -52,7 +52,7 @@ Co-authored-by: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
  test/wmemset_valid_mismatched.c  |  13 +++
  test/wmemset_valid_same.c        |  13 +++
  wmemset.c                        |  12 +++
- 46 files changed, 1167 insertions(+), 12 deletions(-)
+ 46 files changed, 1177 insertions(+), 13 deletions(-)
  create mode 100644 memccpy.c
  create mode 100644 memcpy.c
  create mode 100644 memmove.c
@@ -238,7 +238,7 @@ index da8676d9..01ce8d6d 100644
  CONFIG_LABEL_MEMORY := false
 +CONFIG_BLOCK_OPS_CHECK_SIZE := false
 diff --git a/h_malloc.c b/h_malloc.c
-index ef66b37a..b74e3ec7 100644
+index 238bc4a4..df16aad3 100644
 --- a/h_malloc.c
 +++ b/h_malloc.c
 @@ -20,6 +20,10 @@
@@ -279,7 +279,7 @@ index ef66b37a..b74e3ec7 100644
          }
      }
  
-@@ -1516,7 +1520,7 @@ EXPORT void *h_calloc(size_t nmemb, size_t size) {
+@@ -1680,7 +1684,7 @@ EXPORT void *h_calloc(size_t nmemb, size_t size) {
      total_size = adjust_size_for_canary(total_size);
      void *p = alloc(total_size);
      if (!ZERO_ON_FREE && likely(p != NULL) && total_size && total_size <= max_slab_size_class) {
@@ -288,7 +288,7 @@ index ef66b37a..b74e3ec7 100644
      }
  #ifdef HAS_ARM_MTE
      // use an assert instead of adding a conditional to memset() above (freed memory is always
-@@ -1694,7 +1698,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
+@@ -1858,7 +1862,7 @@ EXPORT void *h_realloc(void *old, size_t size) {
      if (copy_size > 0 && copy_size <= max_slab_size_class) {
          copy_size -= canary_size;
      }
@@ -297,7 +297,7 @@ index ef66b37a..b74e3ec7 100644
      if (old_in_slab_region) {
          deallocate_small(old, NULL);
      } else {
-@@ -1983,6 +1987,136 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
+@@ -2147,6 +2151,145 @@ EXPORT size_t h_malloc_object_size_fast(const void *p) {
      return SIZE_MAX;
  }
  
@@ -351,7 +351,7 @@ index ef66b37a..b74e3ec7 100644
 +}
 +
 +EXPORT void *mempcpy(void *restrict dst, const void *restrict src, size_t len) {
-+    return memcpy(dst, src, len) + len;
++    return (char *)memcpy(dst, src, len) + len;
 +}
 +
 +EXPORT void *memset(void *dst, int value, size_t len) {
@@ -392,6 +392,9 @@ index ef66b37a..b74e3ec7 100644
 +    if (unlikely(dst < (src + len) && (dst + len) > src)) {
 +        fatal_error("wmemcpy overlap");
 +    }
++    if (unlikely(len > (SIZE_MAX / sizeof(wchar_t)))) {
++        fatal_error("wmemcpy len overflow");
++    }
 +    size_t lenAdj = len * sizeof(wchar_t);
 +    if (unlikely(lenAdj > malloc_object_size(src))) {
 +        fatal_error("wmemcpy read overflow");
@@ -406,6 +409,9 @@ index ef66b37a..b74e3ec7 100644
 +    if (unlikely(dst == src || len == 0)) {
 +        return dst;
 +    }
++    if (unlikely(len > (SIZE_MAX / sizeof(wchar_t)))) {
++        fatal_error("wmemmove len overflow");
++    }
 +    size_t lenAdj = len * sizeof(wchar_t);
 +    if (unlikely(lenAdj > malloc_object_size(src))) {
 +        fatal_error("wmemmove read overflow");
@@ -417,12 +423,15 @@ index ef66b37a..b74e3ec7 100644
 +}
 +
 +EXPORT wchar_t *wmempcpy(wchar_t *restrict dst, const wchar_t *restrict src, size_t len) {
-+    return wmemcpy(dst, src, len) + len;
++    return (wchar_t *)wmemcpy(dst, src, len) + len;
 +}
 +
 +EXPORT wchar_t *wmemset(wchar_t *dst, wchar_t value, size_t len) {
 +    if (unlikely(len == 0)) {
 +        return dst;
++    }
++    if (unlikely(len > (SIZE_MAX / sizeof(wchar_t)))) {
++        fatal_error("wmemset len overflow");
 +    }
 +    if (unlikely((len * sizeof(wchar_t)) > malloc_object_size(dst))) {
 +        fatal_error("wmemset buffer overflow");
@@ -822,7 +831,7 @@ index 00000000..de75eb7a
 +void musl_swab(const void *_src, void *_dest, ssize_t n);
 +wchar_t *musl_wmemset(wchar_t *dst, wchar_t value, size_t len);
 diff --git a/random.c b/random.c
-index ba3d4810..82f212ca 100644
+index ba3d4810..a0326947 100644
 --- a/random.c
 +++ b/random.c
 @@ -5,6 +5,10 @@
@@ -846,6 +855,15 @@ index ba3d4810..82f212ca 100644
  
          buf = (char *)buf + copy_size;
 @@ -79,7 +83,7 @@ u16 get_random_u16(struct random_state *state) {
+     if (unlikely(remaining < sizeof(value))) {
+         refill(state);
+     }
+-    memcpy(&value, state->cache + state->index, sizeof(value));
++    h_memcpy_internal(&value, state->cache + state->index, sizeof(value));
+     state->index += sizeof(value);
+     return value;
+ }
+@@ -107,7 +111,7 @@ u32 get_random_u32(struct random_state *state) {
      if (unlikely(remaining < sizeof(value))) {
          refill(state);
      }
@@ -977,7 +995,7 @@ index 2e816412..2514d17d 100644
  
 diff --git a/test/memccpy_buffer_overflow.c b/test/memccpy_buffer_overflow.c
 new file mode 100644
-index 00000000..ca0c5d1d
+index 00000000..4565372d
 --- /dev/null
 +++ b/test/memccpy_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -989,7 +1007,7 @@ index 00000000..ca0c5d1d
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(16);
 +    char *secondbuffer = malloc(32);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 32);
@@ -998,7 +1016,7 @@ index 00000000..ca0c5d1d
 +}
 diff --git a/test/memccpy_read_overflow.c b/test/memccpy_read_overflow.c
 new file mode 100644
-index 00000000..3b15f539
+index 00000000..0c82b074
 --- /dev/null
 +++ b/test/memccpy_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1010,7 +1028,7 @@ index 00000000..3b15f539
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(32);
 +    char *secondbuffer = malloc(16);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 16);
@@ -1019,7 +1037,7 @@ index 00000000..3b15f539
 +}
 diff --git a/test/memccpy_valid_mismatched.c b/test/memccpy_valid_mismatched.c
 new file mode 100644
-index 00000000..b5434f7a
+index 00000000..147e7a00
 --- /dev/null
 +++ b/test/memccpy_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1031,7 +1049,7 @@ index 00000000..b5434f7a
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(32);
 +    char *secondbuffer = malloc(16);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 16);
@@ -1040,7 +1058,7 @@ index 00000000..b5434f7a
 +}
 diff --git a/test/memccpy_valid_same.c b/test/memccpy_valid_same.c
 new file mode 100644
-index 00000000..a9ba59b3
+index 00000000..5cf59b71
 --- /dev/null
 +++ b/test/memccpy_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1052,7 +1070,7 @@ index 00000000..a9ba59b3
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(16);
 +    char *secondbuffer = malloc(16);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 16);
@@ -1061,7 +1079,7 @@ index 00000000..a9ba59b3
 +}
 diff --git a/test/memcpy_buffer_overflow.c b/test/memcpy_buffer_overflow.c
 new file mode 100644
-index 00000000..16cab77e
+index 00000000..05b58f20
 --- /dev/null
 +++ b/test/memcpy_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -1073,7 +1091,7 @@ index 00000000..16cab77e
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(16);
 +    char *secondbuffer = malloc(32);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 32);
@@ -1082,7 +1100,7 @@ index 00000000..16cab77e
 +}
 diff --git a/test/memcpy_read_overflow.c b/test/memcpy_read_overflow.c
 new file mode 100644
-index 00000000..cf51498a
+index 00000000..a6f1a67f
 --- /dev/null
 +++ b/test/memcpy_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1094,7 +1112,7 @@ index 00000000..cf51498a
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(32);
 +    char *secondbuffer = malloc(16);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 16);
@@ -1103,7 +1121,7 @@ index 00000000..cf51498a
 +}
 diff --git a/test/memcpy_valid_mismatched.c b/test/memcpy_valid_mismatched.c
 new file mode 100644
-index 00000000..81d718e1
+index 00000000..bfcb9c0f
 --- /dev/null
 +++ b/test/memcpy_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1115,7 +1133,7 @@ index 00000000..81d718e1
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(32);
 +    char *secondbuffer = malloc(16);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 16);
@@ -1124,7 +1142,7 @@ index 00000000..81d718e1
 +}
 diff --git a/test/memcpy_valid_same.c b/test/memcpy_valid_same.c
 new file mode 100644
-index 00000000..1b408f01
+index 00000000..fa16da43
 --- /dev/null
 +++ b/test/memcpy_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1136,7 +1154,7 @@ index 00000000..1b408f01
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(16);
 +    char *secondbuffer = malloc(16);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 16);
@@ -1145,7 +1163,7 @@ index 00000000..1b408f01
 +}
 diff --git a/test/memmove_buffer_overflow.c b/test/memmove_buffer_overflow.c
 new file mode 100644
-index 00000000..c83bf97c
+index 00000000..4cce804a
 --- /dev/null
 +++ b/test/memmove_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -1157,7 +1175,7 @@ index 00000000..c83bf97c
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(16);
 +    char *secondbuffer = malloc(32);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 32);
@@ -1166,7 +1184,7 @@ index 00000000..c83bf97c
 +}
 diff --git a/test/memmove_read_overflow.c b/test/memmove_read_overflow.c
 new file mode 100644
-index 00000000..73e4509a
+index 00000000..955d442f
 --- /dev/null
 +++ b/test/memmove_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1178,7 +1196,7 @@ index 00000000..73e4509a
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(32);
 +    char *secondbuffer = malloc(16);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 16);
@@ -1187,7 +1205,7 @@ index 00000000..73e4509a
 +}
 diff --git a/test/memmove_valid_mismatched.c b/test/memmove_valid_mismatched.c
 new file mode 100644
-index 00000000..5dd1bde4
+index 00000000..82f35d75
 --- /dev/null
 +++ b/test/memmove_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1199,7 +1217,7 @@ index 00000000..5dd1bde4
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(32);
 +    char *secondbuffer = malloc(16);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 16);
@@ -1208,7 +1226,7 @@ index 00000000..5dd1bde4
 +}
 diff --git a/test/memmove_valid_same.c b/test/memmove_valid_same.c
 new file mode 100644
-index 00000000..2593abcc
+index 00000000..ef4abed5
 --- /dev/null
 +++ b/test/memmove_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1220,7 +1238,7 @@ index 00000000..2593abcc
 +OPTNONE int main(void) {
 +    char *firstbuffer = malloc(16);
 +    char *secondbuffer = malloc(16);
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    memset(secondbuffer, 'a', 16);
@@ -1451,7 +1469,7 @@ index 58f9c75c..af1f3cba 100644
  if __name__ == '__main__':
 diff --git a/test/wmemcpy_buffer_overflow.c b/test/wmemcpy_buffer_overflow.c
 new file mode 100644
-index 00000000..6734943c
+index 00000000..960cd5f2
 --- /dev/null
 +++ b/test/wmemcpy_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -1463,7 +1481,7 @@ index 00000000..6734943c
 +OPTNONE int main(void) {
 +    wchar_t *firstbuffer = malloc(16 * sizeof(wchar_t));
 +    wchar_t *secondbuffer = malloc(32 * sizeof(wchar_t));
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    wmemset(secondbuffer, L'\U0001F642', 32);
@@ -1472,7 +1490,7 @@ index 00000000..6734943c
 +}
 diff --git a/test/wmemcpy_read_overflow.c b/test/wmemcpy_read_overflow.c
 new file mode 100644
-index 00000000..4d30c469
+index 00000000..1ba722c6
 --- /dev/null
 +++ b/test/wmemcpy_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1484,7 +1502,7 @@ index 00000000..4d30c469
 +OPTNONE int main(void) {
 +    wchar_t *firstbuffer = malloc(32 * sizeof(wchar_t));
 +    wchar_t *secondbuffer = malloc(16 * sizeof(wchar_t));
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    wmemset(secondbuffer, L'\U0001F642', 16);
@@ -1493,7 +1511,7 @@ index 00000000..4d30c469
 +}
 diff --git a/test/wmemcpy_valid_mismatched.c b/test/wmemcpy_valid_mismatched.c
 new file mode 100644
-index 00000000..21ccff6f
+index 00000000..f1180d19
 --- /dev/null
 +++ b/test/wmemcpy_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1505,7 +1523,7 @@ index 00000000..21ccff6f
 +OPTNONE int main(void) {
 +    wchar_t *firstbuffer = malloc(32 * sizeof(wchar_t));
 +    wchar_t *secondbuffer = malloc(16 * sizeof(wchar_t));
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    wmemset(secondbuffer, L'\U0001F642', 16);
@@ -1514,7 +1532,7 @@ index 00000000..21ccff6f
 +}
 diff --git a/test/wmemcpy_valid_same.c b/test/wmemcpy_valid_same.c
 new file mode 100644
-index 00000000..5d3633c2
+index 00000000..d85b183b
 --- /dev/null
 +++ b/test/wmemcpy_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1526,7 +1544,7 @@ index 00000000..5d3633c2
 +OPTNONE int main(void) {
 +    wchar_t *firstbuffer = malloc(16 * sizeof(wchar_t));
 +    wchar_t *secondbuffer = malloc(16 * sizeof(wchar_t));
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    wmemset(secondbuffer, L'\U0001F642', 16);
@@ -1535,7 +1553,7 @@ index 00000000..5d3633c2
 +}
 diff --git a/test/wmemmove_buffer_overflow.c b/test/wmemmove_buffer_overflow.c
 new file mode 100644
-index 00000000..aa78ace3
+index 00000000..d80ba3f0
 --- /dev/null
 +++ b/test/wmemmove_buffer_overflow.c
 @@ -0,0 +1,15 @@
@@ -1547,7 +1565,7 @@ index 00000000..aa78ace3
 +OPTNONE int main(void) {
 +    wchar_t *firstbuffer = malloc(16 * sizeof(wchar_t));
 +    wchar_t *secondbuffer = malloc(32 * sizeof(wchar_t));
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    wmemset(secondbuffer, L'\U0001F642', 32);
@@ -1556,7 +1574,7 @@ index 00000000..aa78ace3
 +}
 diff --git a/test/wmemmove_read_overflow.c b/test/wmemmove_read_overflow.c
 new file mode 100644
-index 00000000..3f1338fb
+index 00000000..20ea0698
 --- /dev/null
 +++ b/test/wmemmove_read_overflow.c
 @@ -0,0 +1,15 @@
@@ -1568,7 +1586,7 @@ index 00000000..3f1338fb
 +OPTNONE int main(void) {
 +    wchar_t *firstbuffer = malloc(32 * sizeof(wchar_t));
 +    wchar_t *secondbuffer = malloc(16 * sizeof(wchar_t));
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    wmemset(secondbuffer, L'\U0001F642', 16);
@@ -1577,7 +1595,7 @@ index 00000000..3f1338fb
 +}
 diff --git a/test/wmemmove_valid_mismatched.c b/test/wmemmove_valid_mismatched.c
 new file mode 100644
-index 00000000..2a77f78b
+index 00000000..3d58c912
 --- /dev/null
 +++ b/test/wmemmove_valid_mismatched.c
 @@ -0,0 +1,15 @@
@@ -1589,7 +1607,7 @@ index 00000000..2a77f78b
 +OPTNONE int main(void) {
 +    wchar_t *firstbuffer = malloc(32 * sizeof(wchar_t));
 +    wchar_t *secondbuffer = malloc(16 * sizeof(wchar_t));
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    wmemset(secondbuffer, L'\U0001F642', 16);
@@ -1598,7 +1616,7 @@ index 00000000..2a77f78b
 +}
 diff --git a/test/wmemmove_valid_same.c b/test/wmemmove_valid_same.c
 new file mode 100644
-index 00000000..a738d205
+index 00000000..691a9217
 --- /dev/null
 +++ b/test/wmemmove_valid_same.c
 @@ -0,0 +1,15 @@
@@ -1610,7 +1628,7 @@ index 00000000..a738d205
 +OPTNONE int main(void) {
 +    wchar_t *firstbuffer = malloc(16 * sizeof(wchar_t));
 +    wchar_t *secondbuffer = malloc(16 * sizeof(wchar_t));
-+    if (!firstbuffer && !secondbuffer) {
++    if (!firstbuffer || !secondbuffer) {
 +        return 1;
 +    }
 +    wmemset(secondbuffer, L'\U0001F642', 16);

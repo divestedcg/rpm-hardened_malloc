@@ -3,7 +3,7 @@ BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
 Release: 1%{?dist}
-Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/2026100600
+Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/2026110200
 Source1: 0001-opt.patch
 Source2: 0002-graceful_pkey.patch
 Source3: hardened_malloc.conf
