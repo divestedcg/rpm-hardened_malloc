@@ -10,7 +10,7 @@ build_rpm:
   script:
     - wget https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/2026110200
     - echo "5532976aa9f51b0ab844015a0acf665c0360bc7e01fda3d72b67a358ebb3f079cbfc9203e920fffc19f7050af7db92ca0afbaf23fb509775606a2526289e5850  2026110200" | sha512sum -c
-    - fedpkg --release f44 local
+    - fedpkg --release f45 local
   artifacts:
     paths:
         - x86_64/hardened_malloc*.x86_64.rpm

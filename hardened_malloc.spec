@@ -2,7 +2,7 @@ BuildArch: x86_64
 BuildRequires: gcc, gcc-c++, make
 License: MIT
 Name: hardened_malloc
-Release: 1%{?dist}
+Release: 2%{?dist}
 Source0: https://api.github.com/repos/GrapheneOS/hardened_malloc/tarball/2026110200
 Source1: 0001-opt.patch
 Source2: 0002-graceful_pkey.patch
@@ -34,6 +34,10 @@ echo "libhardened_malloc.so" > /etc/ld.so.preload;
 else
 echo "Enabling hardened_malloc with -memefficient variant";
 echo "libhardened_malloc-memefficient.so" > /etc/ld.so.preload;
+fi;
+if [ -f "/etc/systemd/system/display-manager.service" ]; then
+echo "display manager found, disabling for non-root users";
+chmod 600 /etc/ld.so.preload;
 fi;
 
 %preun

@@ -12,6 +12,10 @@ post_install() {
 		echo "Enabling hardened_malloc with -memefficient variant";
 		echo "libhardened_malloc-memefficient.so" > /etc/ld.so.preload;
 	fi;
+	if [ -f "/etc/systemd/system/display-manager.service" ]; then
+		echo "display manager found, disabling for non-root users";
+		chmod 600 /etc/ld.so.preload;
+	fi;
 }
 
 post_remove() {
